@@ -3,9 +3,10 @@ spring:
     web-application-type: none
 
   datasource:
-    url: jdbc:postgresql://db:5432/precos_db
-    username: user
-    password: password
+    platform: postgres
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:

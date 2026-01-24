@@ -1,0 +1,47 @@
+
+services:
+
+  coletor:
+    build:
+      context: ./datacollector
+      dockerfile: Dockerfile
+    container_name: java_app_coletor
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db_precos:5432/precos_db
+      SPRING_DATASOURCE_USERNAME: user
+      SPRING_DATASOURCE_PASSWORD: password
+    volumes:
+
+      - ./dadosParaDashBoards:/app/output
+    depends_on:
+      db_precos:
+        condition: service_healthy
+    networks:
+      scraper_net:
+
+  # O Banco de Dados
+  db_precos:
+    image: postgres:15-alpine
+    container_name: db_precos
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: precos_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data_volume:/var/lib/postgresql/data
+    networks:
+      scraper_net:
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d precos_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  db_data_volume:
+
+networks:
+  scraper_net:
+    driver: bridge
