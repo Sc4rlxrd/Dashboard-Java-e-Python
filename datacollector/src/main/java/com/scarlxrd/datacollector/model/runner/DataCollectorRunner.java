@@ -28,10 +28,14 @@ public class DataCollectorRunner implements CommandLineRunner {
         List<String> urls = List.of(
                 "https://boadica.com.br/produtos/p206263/14t-512gb--12gb-titan-black-preto" ,
                 "https://boadica.com.br/produtos/p212724/15t--512gb--12gb-black",
-                "https://boadica.com.br/produtos/p211057/f7-12gb512gb-black-preto"
+                "https://boadica.com.br/produtos/p211057/f7-12gb512gb-black-preto",
+                "https://www.amazon.com.br/gp/product/B0F4M66XWL/ref=ox_sc_act_title_2?smid=A1ZZFT5FULY4LN&psc=1",
+                "https://www.mercadolivre.com.br/notebook-gamer-asus-tuf-gaming-a15-nvidia-rtx-3050-amd-ryzen-7-7435hs-31-ghz-8gb-ram-512gb-ssd-keepos-linux-tela-156-fhd-nivel-ips-144hz-graphite-black-fa506ncr-hn089/p/MLB46999993?matt_tool=68505111&forceInApp=true",
+                "https://www.amazon.com.br/Notebook-Lenovo-15IAX9E-i5-12450HX-Windows/dp/B0DSXN1XBL/ref=sr_1_17?s=computers&sr=1-17",
+                "https://www.casasbahia.com.br/notebook-lenovo-ideapad-slim-3-15arp10-amd-ryzen-7-7735hs-24gb-512gb-ssd-windows-11-153-quot-83mm0003bo-luna-grey/p/1578744633?IdSku=1578744633&idLojista=25052&tipoLojista=3P&&gad_campaignid=22846609334"
         );
 
-        System.out.println("Iniciando a rodada de coleta para  "  + urls.size());
+        System.out.println("Iniciando a rodada de coleta para  "  + urls.size() + " Itens...");
         for (String url : urls) {
             try {
                 Thread.sleep(8000);
