@@ -20,9 +20,12 @@ public class ScraperService {
     public Product captureData(String url) {
 
         ChromeOptions options = new ChromeOptions();
+        options.setBinary("/usr/bin/chromium-browser");
         options.addArguments("--headless=new");
         options.addArguments("--disable-gpu");
         options.addArguments("--no-sandbox");
+        options.addArguments("--disable-dev-shm-usage");
+        options.setExperimentalOption("excludeSwitches", new String[]{"enable-automation"});
 
         WebDriver driver = new ChromeDriver(options);
 
