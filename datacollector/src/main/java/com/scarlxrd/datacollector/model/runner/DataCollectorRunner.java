@@ -40,7 +40,7 @@ public class DataCollectorRunner implements CommandLineRunner {
                 System.out.println("Salvando no banco...");
                 productRepository.save(produto);
             }catch (Exception e){
-                System.err.println("❌ Erro ao coletar URL: " + url + " | Erro: " + e.getMessage());
+                System.err.println(" Erro ao coletar URL: " + url + " | Erro: " + e.getMessage());
             }
         }
 
@@ -50,7 +50,6 @@ public class DataCollectorRunner implements CommandLineRunner {
 
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new JavaTimeModule());
-        // Caminho onde o Docker mapeia a pasta do seu PC
         mapper.writeValue(new File("/app/output/precos.json"), allProducts);
 
         System.out.println("Sucesso! Finalizando processo...");
