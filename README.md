@@ -56,7 +56,7 @@ O sistema possui **foco total e suporte ao portal BoaDica**, extraindo com preci
 
 ### 1. Iniciar o Coletor e Banco (Docker)
 ```bash
-docker-compose up --build
+docker-compose up
 
 # Instalar dependências
 pip install -r requirements.txt
