@@ -1,0 +1,14 @@
+venv/
+__pycache__/
+*.pyc
+.idea/
+*.iml
+out/
+*.class
+*.jar
+target/
+.DS_Store
+logs/
+*.log
+*.json  
+.mvn/
