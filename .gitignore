@@ -12,4 +12,3 @@ logs/
 *.log
 *.json  
 .mvn/
-*.png
