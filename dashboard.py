@@ -44,7 +44,7 @@ if os.path.exists(JSON_FILE):
             template="plotly_dark"
         )
         fig_line.update_yaxes(tickprefix="R$ ", autorange=True)
-        st.plotly_chart(fig_line, use_container_width=True)
+        st.plotly_chart(fig_line, width="stretch")
 
         st.markdown("---")
         st.subheader("📊 Comparativo da Última Coleta")
@@ -53,14 +53,14 @@ if os.path.exists(JSON_FILE):
             df_recente, x='model', y='price', color='model',
             text_auto='.2f', template="plotly_dark"
         )
-        st.plotly_chart(fig_bar, use_container_width=True)
+        st.plotly_chart(fig_bar, width="stretch")
 
         # --- TABELA DE HISTÓRICO ---
         st.markdown("---")
         with st.expander("📋 Ver Histórico Completo de Coletas"):
             df_view = df_filtrado.sort_values(by='collectionDate', ascending=False).copy()
             df_view['price'] = df_view['price'].map('R$ {:,.2f}'.format)
-            st.dataframe(df_view[['collectionDate', 'model', 'price', 'store']], use_container_width=True, hide_index=True)
+            st.dataframe(df_view[['collectionDate', 'model', 'price', 'store']], width="stretch", hide_index=True)
     else:
         st.info("Selecione um produto para visualizar.")
 else:
