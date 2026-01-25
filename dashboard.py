@@ -12,55 +12,56 @@ st.markdown("---")
 if os.path.exists(JSON_FILE):
     df = pd.read_json(JSON_FILE)
     df['collectionDate'] = pd.to_datetime(df['collectionDate'])
-    # Filtra apenas preços válidos e ordena por data
+    
+    # IMPORTANTE: Ordenar por data para o gráfico de linha funcionar
     df = df[df['price'] > 0].sort_values(by='collectionDate')
 
     st.sidebar.header("🎯 Painel de Filtros")
     selecionados_modelos = st.sidebar.multiselect("Produtos:", options=sorted(df['model'].unique()), default=df['model'].unique())
-    selecionadas_lojas = st.sidebar.multiselect("Lojas:", options=sorted(df['store'].unique()), default=df['store'].unique())
     
-    df_filtrado = df[(df['model'].isin(selecionados_modelos)) & (df['store'].isin(selecionadas_lojas))]
+    df_filtrado = df[df['model'].isin(selecionados_modelos)]
 
     if not df_filtrado.empty:
-        
-        col1, col2, col3 = st.columns(3)
-        modelos_cards = selecionados_modelos[:3]
-        cols = [col1, col2, col3]
-
-        for i, modelo in enumerate(modelos_cards):
+        # --- CARDS DE RESUMO (Última Coleta) ---
+        cols = st.columns(len(selecionados_modelos[:5]))
+        for i, modelo in enumerate(selecionados_modelos[:5]):
             dados_m = df_filtrado[df_filtrado['model'] == modelo]
-            if not dados_m.empty:
-                atual = dados_m.iloc[-1]['price']
-                minimo = dados_m['price'].min()
-                delta = "MENOR PREÇO!" if atual <= minimo else f"+ R$ {atual - minimo:.2f}"
-                
-                cols[i].metric(label=f"📍 {modelo[:20]}...", value=f"R$ {atual:,.2f}", 
-                               delta=delta, delta_color="normal" if atual > minimo else "inverse")
+            atual = dados_m.iloc[-1]['price']
+            minimo = dados_m['price'].min()
+            delta = "MENOR PREÇO!" if atual <= minimo else f"+ R$ {atual - minimo:.2f}"
+            cols[i].metric(label=modelo[:15], value=f"R$ {atual:,.2f}", delta=delta, delta_color="inverse")
 
-        st.markdown("---")
-
-      
-        df_recente = df_filtrado.sort_values('collectionDate').groupby(['model', 'store']).tail(1)
-        
-        fig_bar = px.bar(
-            df_recente, 
-            x='model', 
+            # --- GRÁFICO 1: EVOLUÇÃO (LINHAS) ---
+        # Aqui é onde você verá os dados de ONTEM e HOJE conectados
+        st.subheader("📈 Histórico de Variação (Evolução Temporal)")
+        fig_line = px.line(
+            df_filtrado, 
+            x='collectionDate', 
             y='price', 
-            color='store',
-            text_auto='.2f',
-            title="Comparativo de Preços Atuais (R$)",
+            color='model',
+            markers=True,
+            title="Oscilação de Preços ao Longo do Tempo",
             template="plotly_dark"
         )
-        fig_bar.update_yaxes(tickprefix="R$ ", autorange=True)
+        fig_line.update_yaxes(tickprefix="R$ ", autorange=True)
+        st.plotly_chart(fig_line, use_container_width=True)
+
+        st.markdown("---")
+        st.subheader("📊 Comparativo da Última Coleta")
+        df_recente = df_filtrado.groupby(['model', 'store']).tail(1)
+        fig_bar = px.bar(
+            df_recente, x='model', y='price', color='model',
+            text_auto='.2f', template="plotly_dark"
+        )
         st.plotly_chart(fig_bar, use_container_width=True)
 
-     
+        # --- TABELA DE HISTÓRICO ---
         st.markdown("---")
         with st.expander("📋 Ver Histórico Completo de Coletas"):
             df_view = df_filtrado.sort_values(by='collectionDate', ascending=False).copy()
             df_view['price'] = df_view['price'].map('R$ {:,.2f}'.format)
-            st.dataframe(df_view[['model', 'store', 'price', 'collectionDate']], use_container_width=True, hide_index=True)
+            st.dataframe(df_view[['collectionDate', 'model', 'price', 'store']], use_container_width=True, hide_index=True)
     else:
-        st.info("Selecione um produto para visualizar os dados.")
+        st.info("Selecione um produto para visualizar.")
 else:
-    st.warning("Arquivo JSON não encontrado. Execute o coletor Java.")
+    st.warning("JSON não encontrado. Certifique-se de que o volume do Docker está montado corretamente.")
