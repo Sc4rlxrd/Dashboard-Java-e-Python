@@ -1,6 +1,4 @@
-
 services:
-
   coletor:
     build:
       context: ./datacollector
@@ -12,7 +10,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: password
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
     volumes:
-
+      - ./datacollector/urls.txt:/app/urls.txt
       - ./dadosParaDashBoards:/app/output
     depends_on:
       db_precos:
