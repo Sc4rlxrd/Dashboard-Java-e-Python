@@ -1,4 +1,3 @@
-
 FROM maven:3.9.6-eclipse-temurin-21-alpine AS build
 WORKDIR /app
 LABEL authors="scalxrd"
@@ -9,12 +8,7 @@ RUN mvn clean package -DskipTests
 FROM eclipse-temurin:21-jre-alpine
 
 
-RUN apk add --no-search --update \
-    chromium \
-    chromium-chromedriver \
-    ttf-freefont \
-    && rm -rf /var/cache/apk/*
-
+RUN apk add --no-cache chromium chromium-chromedriver ttf-freefont
 COPY --from=build /app/target/*.jar app.jar
 
 
