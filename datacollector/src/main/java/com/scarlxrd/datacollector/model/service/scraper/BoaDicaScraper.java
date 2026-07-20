@@ -6,7 +6,6 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 import org.springframework.stereotype.Component;
 
 
-import java.math.BigDecimal;
 import java.net.URI;
 
 @Component
