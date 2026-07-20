@@ -1,14 +1,24 @@
 venv/
 __pycache__/
 *.pyc
+
 .idea/
 *.iml
 out/
+
 *.class
 *.jar
 target/
+
 .DS_Store
+
 logs/
 *.log
-*.json  
+
+dadosParaDashBoards/*.json
+!dadosParaDashBoards/.gitkeep
+
+.env
 .mvn/
+# Generated scraper debug artifacts
+dadosParaDashBoards/debug/

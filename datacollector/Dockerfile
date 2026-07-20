@@ -1,18 +1,37 @@
+# syntax=docker/dockerfile:1
+
 FROM maven:3.9.6-eclipse-temurin-21-alpine AS build
+
+WORKDIR /workspace
+
+COPY pom.xml .
+
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn -B -ntp dependency:go-offline
+
+COPY src ./src
+
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn -B -ntp clean package -DskipTests
+
+
+FROM eclipse-temurin:21-jre-alpine AS runtime
+
+LABEL org.opencontainers.image.authors="scarlxrd" \
+      org.opencontainers.image.source="https://github.com/Sc4rlxrd/Dashboard-Java-e-Python"
+
+RUN apk add --no-cache \
+    chromium \
+    chromium-chromedriver \
+    ttf-freefont
+
 WORKDIR /app
-LABEL authors="scalxrd"
-COPY . .
-RUN mvn clean package -DskipTests
 
+COPY --from=build \
+    /workspace/target/*.jar \
+    /app/app.jar
 
-FROM eclipse-temurin:21-jre-alpine
+ENV CHROME_BIN=/usr/bin/chromium-browser \
+    CHROMEDRIVER_PATH=/usr/bin/chromedriver
 
-
-RUN apk add --no-cache chromium chromium-chromedriver ttf-freefont
-COPY --from=build /app/target/*.jar app.jar
-
-
-ENV CHROME_BIN=/usr/bin/chromium-browser
-ENV CHROME_PATH=/usr/lib/chromium/
-
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]

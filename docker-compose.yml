@@ -1,46 +1,107 @@
+name: price-monitor
+
 services:
-  coletor:
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard
+
+    environment:
+      PRICE_DATA_FILE: /app/data/precos.json
+
+    ports:
+      - "127.0.0.1:8501:8501"
+
+    volumes:
+      - ./dadosParaDashBoards:/app/data:ro,z
+
+    restart: unless-stopped
+    init: true
+
+    networks:
+      - frontend
+
+  collector:
+    profiles:
+      - collector
+
     build:
       context: ./datacollector
       dockerfile: Dockerfile
-    container_name: java_app_coletor
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db_precos:5432/precos_db
-      SPRING_DATASOURCE_USERNAME: user
-      SPRING_DATASOURCE_PASSWORD: password
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
-    volumes:
-      - ./datacollector/urls.txt:/app/urls.txt
-      - ./dadosParaDashBoards:/app/output
-    depends_on:
-      db_precos:
-        condition: service_healthy
-    networks:
-      scraper_net:
 
-  # O Banco de Dados
-  db_precos:
-    image: postgres:15-alpine
-    container_name: db_precos
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: precos_db
-    ports:
-      - "5432:5432"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://database:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+
+      JPA_DDL_AUTO: update
+
+      JAVA_TOOL_OPTIONS: >-
+        -Xms64m
+        -Xmx192m
+        -XX:+ExitOnOutOfMemoryError
+
+      CHROME_BIN: /usr/bin/chromium-browser
+      CHROMEDRIVER_PATH: /usr/bin/chromedriver
+
+      COLLECTOR_URLS_FILE: /app/urls.txt
+      COLLECTOR_OUTPUT_FILE: /app/output/precos.json
+      COLLECTOR_DELAY_MS: "8000"
+
     volumes:
-      - db_data_volume:/var/lib/postgresql/data
+      - ./datacollector/urls.txt:/app/urls.txt:ro,Z
+      - ./dadosParaDashBoards:/app/output:rw,z
+
+    depends_on:
+      database:
+        condition: service_healthy
+
+    init: true
+
     networks:
-      scraper_net:
+      - backend
+      - egress
+
+  database:
+    profiles:
+      - collector
+
+    image: postgres:15-alpine
+
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+
+    volumes:
+      - database_data:/var/lib/postgresql/data
+
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d precos_db"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\"",
+        ]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 10s
+
+    stop_grace_period: 30s
+
+    networks:
+      - backend
 
 volumes:
-  db_data_volume:
+  database_data:
 
 networks:
-  scraper_net:
+  frontend:
+    driver: bridge
+
+  backend:
+    driver: bridge
+    internal: true
+
+  egress:
     driver: bridge
