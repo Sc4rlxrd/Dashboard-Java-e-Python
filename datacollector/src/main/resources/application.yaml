@@ -3,24 +3,27 @@ spring:
     web-application-type: none
 
   datasource:
-    platform: postgres
     url: ${SPRING_DATASOURCE_URL}
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
+    hikari:
+      pool-name: PriceCollector-HikariPool
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:2}
+      minimum-idle: ${DB_POOL_MIN_IDLE:0}
+      connection-timeout: 20000
+      idle-timeout: 30000
+      max-lifetime: 600000
+
   jpa:
     hibernate:
-
-     ddl-auto: update
+      ddl-auto: ${JPA_DDL_AUTO:update}
     show-sql: false
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-
+    open-in-view: false
 
 logging:
   level:
     root: INFO
     org.springframework.data: INFO
-    com.scarlxrd.datacollector: DEBUG
+    com.scarlxrd.datacollector: ${COLLECTOR_LOG_LEVEL:INFO}
