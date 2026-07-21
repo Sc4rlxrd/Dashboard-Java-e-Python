@@ -243,8 +243,9 @@ figure_line = px.line(
 
 figure_line.update_yaxes(tickprefix="R$ ", autorange=True)
 figure_line.update_layout(legend_title_text="Produtos e lojas")
-
+figure_line.update_layout(showlegend=False)
 st.plotly_chart(figure_line, width="stretch")
+
 
 
 # ==========================================================
