@@ -1,18 +1,20 @@
 spring:
+  application:
+    name: datacollector
   main:
     web-application-type: none
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL}
-    username: ${SPRING_DATASOURCE_USERNAME}
-    password: ${SPRING_DATASOURCE_PASSWORD}
-    driver-class-name: org.postgresql.Driver
+    url: "jdbc:h2:file:${H2_DATABASE_PATH:/app/data/price-monitor};DB_CLOSE_ON_EXIT=FALSE"
+    username: ${SPRING_DATASOURCE_USERNAME:sa}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+    driver-class-name: org.h2.Driver
 
     hikari:
       pool-name: PriceCollector-HikariPool
-      maximum-pool-size: ${DB_POOL_MAX_SIZE:2}
-      minimum-idle: ${DB_POOL_MIN_IDLE:0}
-      connection-timeout: 20000
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:1}
+      minimum-idle: ${DB_POOL_MIN_IDLE:1}
+      connection-timeout: 30000
       idle-timeout: 30000
       max-lifetime: 600000
 
@@ -22,6 +24,8 @@ spring:
     show-sql: false
     open-in-view: false
 
+collector:
+  enabled: "${COLLECTOR_ENABLED:true}"
 logging:
   level:
     root: INFO

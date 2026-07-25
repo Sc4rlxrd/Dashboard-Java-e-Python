@@ -20,13 +20,20 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.List;
 import java.util.stream.Stream;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 @Component
+@ConditionalOnProperty(
+        prefix = "collector",
+        name = "enabled",
+        havingValue = "true",
+        matchIfMissing = true
+)
 public class DataCollectorRunner implements CommandLineRunner {
 
     private static final Logger logger = LoggerFactory.getLogger(DataCollectorRunner.class);
 
     private static final String DEFAULT_URLS_FILE = "/app/urls.txt";
-    private static final String DEFAULT_OUTPUT_FILE = "/app/output/precos.json";
+    private static final String DEFAULT_OUTPUT_FILE = "/app/data/precos.json";
 
     private static final long DEFAULT_DELAY_MS = 8_000L;
 

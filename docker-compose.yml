@@ -30,10 +30,8 @@ services:
       dockerfile: Dockerfile
 
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://database:5432/${POSTGRES_DB}
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
-
+      H2_DATABASE_PATH: /app/data/price-monitor
+      SPRING_DATASOURCE_USERNAME: sa
       JPA_DDL_AUTO: update
 
       JAVA_TOOL_OPTIONS: >-
@@ -45,63 +43,23 @@ services:
       CHROMEDRIVER_PATH: /usr/bin/chromedriver
 
       COLLECTOR_URLS_FILE: /app/urls.txt
-      COLLECTOR_OUTPUT_FILE: /app/output/precos.json
-      COLLECTOR_DELAY_MS: "8000"
+      COLLECTOR_OUTPUT_FILE: /app/data/precos.json
+      COLLECTOR_DELAY_MS: "${COLLECTOR_DELAY_MS:-8000}"
+      COLLECTOR_LOG_LEVEL: "${COLLECTOR_LOG_LEVEL:-INFO}"
 
     volumes:
       - ./datacollector/urls.txt:/app/urls.txt:ro,Z
-      - ./dadosParaDashBoards:/app/output:rw,z
+      - ./dadosParaDashBoards:/app/data:rw,z
 
-    depends_on:
-      database:
-        condition: service_healthy
-
+    restart: "no"
     init: true
 
     networks:
-      - backend
       - egress
-
-  database:
-    profiles:
-      - collector
-
-    image: postgres:15-alpine
-
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-
-    volumes:
-      - database_data:/var/lib/postgresql/data
-
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\"",
-        ]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
-
-    stop_grace_period: 30s
-
-    networks:
-      - backend
-
-volumes:
-  database_data:
 
 networks:
   frontend:
     driver: bridge
-
-  backend:
-    driver: bridge
-    internal: true
 
   egress:
     driver: bridge

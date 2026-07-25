@@ -22,3 +22,10 @@ dadosParaDashBoards/*.json
 .mvn/
 # Generated scraper debug artifacts
 dadosParaDashBoards/debug/
+
+# H2 persistent database
+dadosParaDashBoards/*.mv.db
+dadosParaDashBoards/*.trace.db
+dadosParaDashBoards/*.lock.db
+
+.vscode/
