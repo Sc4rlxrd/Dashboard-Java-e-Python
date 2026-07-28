@@ -15,7 +15,6 @@ https://www.amazon.com.br/Lan%C3%A7amento-Bad-Boy-100ml-Brinde/dp/B07VQK6Q1H/?_e
 https://www.amazon.com.br/Estilo-Pulso-Pulseira-compat%C3%ADvel-Active/dp/B0DK11B566/ref=sr_1_17?sr=8-17
 https://www.amazon.com.br/Caixa-Boombox-BBS-01-B-Bluetooth-Preto/dp/B0D7W6Q7L9/ref=sr_1_5?sr=8-5
 
-
 #  MERCADO LIVRE — temporariamente desativado
 
 # BOA DICA
@@ -31,3 +30,7 @@ https://boadica.com.br/produtos/p170200/switch-lite-32gb-cinza-hdh-001
 # SHOPEE — temporariamente desativado
 # A Shopee redireciona o Chromium para /verify/traffic/error
 #https://shopee.com.br/product/1385382926/23398006332?d_id=52e36&rModelId=129647556065&uls_trackid=566gbf04003d
+
+# OLX — temporariamente desativada por bloqueio HTTP 403 por proteção anti-bot
+#https://rj.olx.com.br/rio-de-janeiro-e-regiao/celulares/iphone-16-128-gb-1521095163?rec=u&custom_tag=home_editorial_categories&gallery_id=home_editorial_categories&tab_id=tudo&is_fallback=false&page=home&rec_detail_location=home&rec_detail_engine=search&rec_detail_recommendation=editorial_categories&lis=home_editorial_categories%7CNA%7Chome_editorial_categories%7C0
+#https://rj.olx.com.br/rio-de-janeiro-e-regiao/autos-e-pecas/carros-vans-e-utilitarios/volkswagen-gol-geracao-iii-power-1-6-mi-8v-gasolina-mec-4p-2003-1521516518?lis=listing_2020

@@ -10,7 +10,9 @@ public enum Store {
     AMAZON("Amazon"),
     MERCADO_LIVRE("Mercado Livre"),
     BOA_DICA("BoaDica"),
-    SHOPEE("Shopee");
+    SHOPEE("Shopee"),
+    OLX("OLX");
+
 
     private final String displayName;
 }
