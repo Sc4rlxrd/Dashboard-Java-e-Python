@@ -5,16 +5,20 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dashboard
-
+      args:
+        DASHBOARD_UID: "${DASHBOARD_UID:-1000}"
+        DASHBOARD_GID: "${DASHBOARD_GID:-1000}"
+        
     environment:
       PRICE_DATA_FILE: /app/data/precos.json
+      URLS_FILE: /app/config/urls.txt
 
     ports:
       - "127.0.0.1:8501:8501"
 
     volumes:
       - ./dadosParaDashBoards:/app/data:ro,z
-
+      - ./datacollector/urls.txt:/app/config/urls.txt:rw,z
     restart: unless-stopped
     init: true
 

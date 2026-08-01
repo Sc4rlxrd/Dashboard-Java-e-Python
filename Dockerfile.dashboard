@@ -3,6 +3,9 @@ FROM python:3.13-slim
 LABEL org.opencontainers.image.authors="scarlxrd" \
       org.opencontainers.image.source="https://github.com/Sc4rlxrd/Dashboard-Java-e-Python"
 
+ARG DASHBOARD_UID=1000
+ARG DASHBOARD_GID=1000
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
@@ -20,17 +23,32 @@ RUN pip install \
     --no-cache-dir \
     --requirement requirements.txt
 
-RUN addgroup --system dashboard \
+RUN addgroup \
+        --gid "${DASHBOARD_GID}" \
+        dashboard \
     && adduser \
-        --system \
+        --uid "${DASHBOARD_UID}" \
         --ingroup dashboard \
+        --disabled-password \
+        --gecos "" \
         --home /app \
-        dashboard
+        dashboard \
+    && mkdir -p \
+        /app/data \
+        /app/config \
+    && chown -R dashboard:dashboard /app
 
-COPY --chown=dashboard:dashboard dashboard.py /app/dashboard.py
+COPY --chown=dashboard:dashboard \
+    dashboard.py \
+    /app/dashboard.py
 
-RUN mkdir -p /app/data \
-    && chown dashboard:dashboard /app/data
+COPY --chown=dashboard:dashboard \
+    components \
+    /app/components
+
+COPY --chown=dashboard:dashboard \
+    services \
+    /app/services
 
 USER dashboard
 
