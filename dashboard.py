@@ -5,10 +5,38 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
+from components.url_form import render_url_form
+from services.url_manager import UrlManager
+
+BASE_DIR = Path(__file__).resolve().parent
 
 JSON_FILE = Path(
-    os.getenv("PRICE_DATA_FILE", "dadosParaDashBoards/precos.json")
+    os.getenv(
+        "PRICE_DATA_FILE",
+        str(
+            BASE_DIR
+            / "dadosParaDashBoards"
+            / "precos.json"
+        ),
+    )
 )
+
+URLS_FILE = Path(
+    os.getenv(
+        "URLS_FILE",
+        str(
+            BASE_DIR
+            / "datacollector"
+            / "urls.txt"
+        ),
+    )
+)
+
+SUPPORTED_STORES = {
+    "amazon.com.br": "Amazon",
+    "boadica.com.br": "BoaDica",
+}
+
 
 st.set_page_config(
     page_title="Monitor de Preços Scarlxrd",
@@ -17,6 +45,13 @@ st.set_page_config(
 )
 
 st.title("💸 Monitoramento de Preços Inteligente do Scarlxrd")
+
+url_manager = UrlManager(
+    urls_file=URLS_FILE,
+    supported_stores=SUPPORTED_STORES,
+)
+
+render_url_form(url_manager)
 st.markdown("---")
 
 if not JSON_FILE.exists():
@@ -68,7 +103,6 @@ except ValueError as exception:
 if df.empty:
     st.warning("Nenhuma coleta válida foi encontrada.")
     st.stop()
-
 
 # ==========================================================
 # FILTROS
@@ -127,7 +161,7 @@ df_filtered = df_store[
     df_store["model"].isin(selected_models)
     & (df_store["collectionDate"].dt.date >= start_date)
     & (df_store["collectionDate"].dt.date <= end_date)
-].copy()
+    ].copy()
 
 st.sidebar.markdown("---")
 st.sidebar.caption(f"🏪 Lojas: {', '.join(selected_stores) or '—'}")
@@ -137,7 +171,6 @@ st.sidebar.caption(f"📋 Coletas encontradas: {len(df_filtered)}")
 if df_filtered.empty:
     st.info("Nenhum produto encontrado para os filtros selecionados.")
     st.stop()
-
 
 # ==========================================================
 # CARDS DA ÚLTIMA COLETA
@@ -157,7 +190,7 @@ for column, (_, product) in zip(columns, latest_products.iterrows()):
     product_history = df_filtered[
         (df_filtered["model"] == product["model"])
         & (df_filtered["store"] == product["store"])
-    ]
+        ]
 
     current_price = product["price"]
     minimum_price = product_history["price"].min()
@@ -177,7 +210,6 @@ for column, (_, product) in zip(columns, latest_products.iterrows()):
         delta=delta,
         delta_color="inverse",
     )
-
 
 # ==========================================================
 # MELHOR OFERTA ATUAL POR PRODUTO (entre lojas)
@@ -209,7 +241,6 @@ st.dataframe(
     width="stretch",
     hide_index=True,
 )
-
 
 # ==========================================================
 # GRÁFICO DE HISTÓRICO
@@ -246,8 +277,6 @@ figure_line.update_layout(legend_title_text="Produtos e lojas")
 figure_line.update_layout(showlegend=False)
 st.plotly_chart(figure_line, width="stretch")
 
-
-
 # ==========================================================
 # COMPARATIVO DA ÚLTIMA COLETA
 # ==========================================================
@@ -280,7 +309,6 @@ figure_bar.update_layout(
 )
 
 st.plotly_chart(figure_bar, width="stretch")
-
 
 # ==========================================================
 # TABELA + EXPORT
