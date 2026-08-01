@@ -34,3 +34,8 @@ https://boadica.com.br/produtos/p170200/switch-lite-32gb-cinza-hdh-001
 # OLX — temporariamente desativada por bloqueio HTTP 403 por proteção anti-bot
 #https://rj.olx.com.br/rio-de-janeiro-e-regiao/celulares/iphone-16-128-gb-1521095163?rec=u&custom_tag=home_editorial_categories&gallery_id=home_editorial_categories&tab_id=tudo&is_fallback=false&page=home&rec_detail_location=home&rec_detail_engine=search&rec_detail_recommendation=editorial_categories&lis=home_editorial_categories%7CNA%7Chome_editorial_categories%7C0
 #https://rj.olx.com.br/rio-de-janeiro-e-regiao/autos-e-pecas/carros-vans-e-utilitarios/volkswagen-gol-geracao-iii-power-1-6-mi-8v-gasolina-mec-4p-2003-1521516518?lis=listing_2020
+
+# URLs adicionadas pelo dashboard
+https://boadica.com.br/produtos/p192602/boombox-3-jblboombox3blkbr-preto
+https://boadica.com.br/produtos/p214256/hmaa2gs6ajr8n-xn
+https://www.amazon.com.br/RAYHAAN-Lion-Parfum-Spray-homens/dp/B0DQFL8H9V/ref=pd_rhf_gw_s_pd_sbs_rvi_d_sccl_1_23/132-1704251-3793741?psc=1
