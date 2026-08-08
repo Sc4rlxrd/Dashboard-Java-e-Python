@@ -4,11 +4,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.scarlxrd.datacollector.model.entity.Product;
+import com.scarlxrd.datacollector.model.exception.CollectionErrorType;
+import com.scarlxrd.datacollector.model.exception.CollectionException;
 import com.scarlxrd.datacollector.model.repository.ProductRepository;
 import com.scarlxrd.datacollector.model.service.ScraperService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -18,9 +21,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.PosixFilePermissions;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+
 @Component
 @ConditionalOnProperty(
         prefix = "collector",
@@ -28,14 +33,22 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
         havingValue = "true",
         matchIfMissing = true
 )
-public class DataCollectorRunner implements CommandLineRunner {
+public class DataCollectorRunner
+        implements CommandLineRunner {
 
-    private static final Logger logger = LoggerFactory.getLogger(DataCollectorRunner.class);
+    private static final Logger logger =
+            LoggerFactory.getLogger(
+                    DataCollectorRunner.class
+            );
 
-    private static final String DEFAULT_URLS_FILE = "/app/urls.txt";
-    private static final String DEFAULT_OUTPUT_FILE = "/app/data/precos.json";
+    private static final String DEFAULT_URLS_FILE =
+            "/app/urls.txt";
 
-    private static final long DEFAULT_DELAY_MS = 8_000L;
+    private static final String DEFAULT_OUTPUT_FILE =
+            "/app/data/precos.json";
+
+    private static final long DEFAULT_DELAY_MS =
+            8_000L;
 
     private final ProductRepository productRepository;
     private final ScraperService scraperService;
@@ -45,18 +58,27 @@ public class DataCollectorRunner implements CommandLineRunner {
             ProductRepository productRepository,
             ScraperService scraperService
     ) {
-        this.productRepository = productRepository;
-        this.scraperService = scraperService;
+        this.productRepository =
+                productRepository;
 
-        this.objectMapper = new ObjectMapper()
-                .registerModule(new JavaTimeModule())
-                .disable(
-                        SerializationFeature.WRITE_DATES_AS_TIMESTAMPS
-                );
+        this.scraperService =
+                scraperService;
+
+        this.objectMapper =
+                new ObjectMapper()
+                        .registerModule(
+                                new JavaTimeModule()
+                        )
+                        .disable(
+                                SerializationFeature
+                                        .WRITE_DATES_AS_TIMESTAMPS
+                        );
     }
 
     @Override
-    public void run(String... args) throws Exception {
+    public void run(String... args)
+            throws Exception {
+
         Path urlsFile = resolvePath(
                 "COLLECTOR_URLS_FILE",
                 DEFAULT_URLS_FILE
@@ -67,9 +89,11 @@ public class DataCollectorRunner implements CommandLineRunner {
                 DEFAULT_OUTPUT_FILE
         );
 
-        long delayBetweenUrls = resolveDelay();
+        long delayBetweenUrls =
+                resolveDelay();
 
-        List<String> urls = loadUrls(urlsFile);
+        List<String> urls =
+                loadUrls(urlsFile);
 
         logger.info(
                 "Iniciando rodada de coleta com {} URL(s)",
@@ -79,8 +103,19 @@ public class DataCollectorRunner implements CommandLineRunner {
         int successfulCollections = 0;
         int failedCollections = 0;
 
-        for (int index = 0; index < urls.size(); index++) {
-            String url = urls.get(index);
+        Map<CollectionErrorType, Integer>
+                failureCounts =
+                new EnumMap<>(
+                        CollectionErrorType.class
+                );
+
+        for (
+                int index = 0;
+                index < urls.size();
+                index++
+        ) {
+            String url =
+                    urls.get(index);
 
             logger.info(
                     "Processando URL {}/{}: {}",
@@ -90,17 +125,35 @@ public class DataCollectorRunner implements CommandLineRunner {
             );
 
             try {
-                Product product = scraperService.captureData(url);
+                Product product =
+                        scraperService.captureData(
+                                url
+                        );
 
                 if (product == null) {
                     failedCollections++;
 
-                    logger.error(
-                            "A captura não retornou dados para: {}",
-                            url
+                    registerFailure(
+                            failureCounts,
+                            CollectionErrorType.UNKNOWN
                     );
+
+                    logger.error(
+                            "Falha na coleta | "
+                                    + "store=UNKNOWN | "
+                                    + "errorType={} | "
+                                    + "url={} | "
+                                    + "message={}",
+                            CollectionErrorType.UNKNOWN,
+                            url,
+                            "A captura não retornou dados"
+                    );
+
                 } else {
-                    productRepository.save(product);
+                    productRepository.save(
+                            product
+                    );
+
                     successfulCollections++;
 
                     logger.info(
@@ -108,25 +161,62 @@ public class DataCollectorRunner implements CommandLineRunner {
                             product.getModel()
                     );
                 }
+
             } catch (
-                    Exception exception) {
+                    CollectionException exception
+            ) {
                 failedCollections++;
 
+                registerFailure(
+                        failureCounts,
+                        exception.getErrorType()
+                );
+
+                logCollectionFailure(
+                        exception,
+                        url
+                );
+
+            } catch (
+                    RuntimeException exception
+            ) {
+                failedCollections++;
+
+                registerFailure(
+                        failureCounts,
+                        CollectionErrorType.UNKNOWN
+                );
+
                 logger.error(
-                        "Erro ao processar a URL: {}",
+                        "Falha inesperada | "
+                                + "errorType={} | "
+                                + "url={} | "
+                                + "message={}",
+                        CollectionErrorType.UNKNOWN,
                         url,
+                        exception.getMessage(),
                         exception
                 );
             }
 
-            boolean hasNextUrl = index < urls.size() - 1;
+            boolean hasNextUrl =
+                    index < urls.size() - 1;
 
-            if (hasNextUrl && delayBetweenUrls > 0) {
-                pauseBetweenUrls(delayBetweenUrls);
+            if (
+                    hasNextUrl
+                            && delayBetweenUrls > 0
+            ) {
+                pauseBetweenUrls(
+                        delayBetweenUrls
+                );
             }
         }
 
         if (successfulCollections == 0) {
+            logFailureSummary(
+                    failureCounts
+            );
+
             throw new IllegalStateException(
                     "Nenhum produto foi coletado com sucesso"
             );
@@ -136,13 +226,20 @@ public class DataCollectorRunner implements CommandLineRunner {
 
         if (failedCollections > 0) {
             logger.warn(
-                    "Coleta concluída parcialmente: {} sucesso(s) e {} falha(s)",
+                    "Coleta concluída parcialmente: "
+                            + "{} sucesso(s) e {} falha(s)",
                     successfulCollections,
                     failedCollections
             );
+
+            logFailureSummary(
+                    failureCounts
+            );
+
         } else {
             logger.info(
-                    "Coleta concluída com sucesso: {} produto(s) coletado(s)",
+                    "Coleta concluída com sucesso: "
+                            + "{} produto(s) coletado(s)",
                     successfulCollections
             );
         }
@@ -153,10 +250,83 @@ public class DataCollectorRunner implements CommandLineRunner {
         );
     }
 
-    private List<String> loadUrls(Path urlsFile) throws IOException {
+    private void logCollectionFailure(
+            CollectionException exception,
+            String fallbackUrl
+    ) {
+        String storeName;
+
+        if (exception.getStore() == null) {
+            storeName = "UNKNOWN";
+        } else {
+            storeName =
+                    exception.getStore()
+                            .getDisplayName();
+        }
+
+        String errorUrl =
+                exception.getUrl() == null
+                        ? fallbackUrl
+                        : exception.getUrl();
+
+        logger.error(
+                "Falha na coleta | "
+                        + "store={} | "
+                        + "errorType={} | "
+                        + "url={} | "
+                        + "message={}",
+                storeName,
+                exception.getErrorType(),
+                errorUrl,
+                exception.getMessage()
+        );
+
+        logger.debug(
+                "Detalhes da falha durante a coleta de {}",
+                errorUrl,
+                exception
+        );
+    }
+
+    private void registerFailure(
+            Map<CollectionErrorType, Integer>
+                    failureCounts,
+            CollectionErrorType errorType
+    ) {
+        CollectionErrorType safeErrorType =
+                errorType == null
+                        ? CollectionErrorType.UNKNOWN
+                        : errorType;
+
+        failureCounts.merge(
+                safeErrorType,
+                1,
+                Integer::sum
+        );
+    }
+
+    private void logFailureSummary(
+            Map<CollectionErrorType, Integer>
+                    failureCounts
+    ) {
+        if (failureCounts.isEmpty()) {
+            return;
+        }
+
+        logger.warn(
+                "Resumo das falhas da coleta: {}",
+                failureCounts
+        );
+    }
+
+    private List<String> loadUrls(
+            Path urlsFile
+    ) throws IOException {
+
         if (!Files.isRegularFile(urlsFile)) {
             throw new IllegalStateException(
-                    "Arquivo de URLs não encontrado: " + urlsFile
+                    "Arquivo de URLs não encontrado: "
+                            + urlsFile
             );
         }
 
@@ -167,49 +337,69 @@ public class DataCollectorRunner implements CommandLineRunner {
 
         List<String> urls;
 
-        try (Stream<String> lines = Files.lines(
-                urlsFile,
-                StandardCharsets.UTF_8
-        )) {
+        try (
+                Stream<String> lines =
+                        Files.lines(
+                                urlsFile,
+                                StandardCharsets.UTF_8
+                        )
+        ) {
             urls = lines
                     .map(String::trim)
-                    .filter(line -> !line.isEmpty())
-                    .filter(line -> !line.startsWith("#"))
+                    .filter(
+                            line ->
+                                    !line.isEmpty()
+                    )
+                    .filter(
+                            line ->
+                                    !line.startsWith("#")
+                    )
                     .distinct()
                     .toList();
         }
 
         if (urls.isEmpty()) {
             throw new IllegalStateException(
-                    "Nenhuma URL válida encontrada em: " + urlsFile
+                    "Nenhuma URL válida encontrada em: "
+                            + urlsFile
             );
         }
 
         return urls;
     }
 
-    private void exportProducts(Path outputFile) throws IOException {
-        List<Product> products = productRepository.findAll();
+    private void exportProducts(
+            Path outputFile
+    ) throws IOException {
+
+        List<Product> products =
+                productRepository.findAll();
 
         Path absoluteOutputFile =
-                outputFile.toAbsolutePath().normalize();
+                outputFile
+                        .toAbsolutePath()
+                        .normalize();
 
         Path outputDirectory =
                 absoluteOutputFile.getParent();
 
         if (outputDirectory == null) {
             throw new IllegalStateException(
-                    "Diretório de saída inválido: " + outputFile
+                    "Diretório de saída inválido: "
+                            + outputFile
             );
         }
 
-        Files.createDirectories(outputDirectory);
-
-        Path temporaryFile = Files.createTempFile(
-                outputDirectory,
-                "precos-",
-                ".json.tmp"
+        Files.createDirectories(
+                outputDirectory
         );
+
+        Path temporaryFile =
+                Files.createTempFile(
+                        outputDirectory,
+                        "precos-",
+                        ".json.tmp"
+                );
 
         try {
             objectMapper.writeValue(
@@ -217,10 +407,22 @@ public class DataCollectorRunner implements CommandLineRunner {
                     products
             );
 
-            replaceOutputFile(temporaryFile,absoluteOutputFile );
-            Files.setPosixFilePermissions(absoluteOutputFile,PosixFilePermissions.fromString( "rw-r--r--"));
+            replaceOutputFile(
+                    temporaryFile,
+                    absoluteOutputFile
+            );
+
+            Files.setPosixFilePermissions(
+                    absoluteOutputFile,
+                    PosixFilePermissions.fromString(
+                            "rw-r--r--"
+                    )
+            );
+
         } finally {
-            Files.deleteIfExists(temporaryFile);
+            Files.deleteIfExists(
+                    temporaryFile
+            );
         }
     }
 
@@ -228,6 +430,7 @@ public class DataCollectorRunner implements CommandLineRunner {
             Path temporaryFile,
             Path outputFile
     ) throws IOException {
+
         try {
             Files.move(
                     temporaryFile,
@@ -235,8 +438,10 @@ public class DataCollectorRunner implements CommandLineRunner {
                     StandardCopyOption.ATOMIC_MOVE,
                     StandardCopyOption.REPLACE_EXISTING
             );
+
         } catch (
-                AtomicMoveNotSupportedException exception) {
+                AtomicMoveNotSupportedException exception
+        ) {
             logger.warn(
                     "Movimentação atômica não suportada. "
                             + "Usando substituição comum."
@@ -250,18 +455,26 @@ public class DataCollectorRunner implements CommandLineRunner {
         }
     }
 
-    private void pauseBetweenUrls(long delayMilliseconds)
-            throws InterruptedException {
+    private void pauseBetweenUrls(
+            long delayMilliseconds
+    ) throws InterruptedException {
+
         logger.debug(
                 "Aguardando {} ms antes da próxima URL",
                 delayMilliseconds
         );
 
         try {
-            Thread.sleep(delayMilliseconds);
+            Thread.sleep(
+                    delayMilliseconds
+            );
+
         } catch (
-                InterruptedException exception) {
-            Thread.currentThread().interrupt();
+                InterruptedException exception
+        ) {
+            Thread.currentThread()
+                    .interrupt();
+
             throw exception;
         }
     }
@@ -271,33 +484,45 @@ public class DataCollectorRunner implements CommandLineRunner {
             String defaultValue
     ) {
         return Path.of(
-                System.getenv().getOrDefault(
-                        environmentVariable,
-                        defaultValue
-                )
+                System.getenv()
+                        .getOrDefault(
+                                environmentVariable,
+                                defaultValue
+                        )
         );
     }
 
     private long resolveDelay() {
-        String configuredValue = System.getenv().getOrDefault(
-                "COLLECTOR_DELAY_MS",
-                String.valueOf(DEFAULT_DELAY_MS)
-        );
+        String configuredValue =
+                System.getenv()
+                        .getOrDefault(
+                                "COLLECTOR_DELAY_MS",
+                                String.valueOf(
+                                        DEFAULT_DELAY_MS
+                                )
+                        );
 
         try {
-            long delay = Long.parseLong(configuredValue);
+            long delay =
+                    Long.parseLong(
+                            configuredValue
+                    );
 
             if (delay < 0) {
                 throw new IllegalArgumentException(
-                        "COLLECTOR_DELAY_MS não pode ser negativo"
+                        "COLLECTOR_DELAY_MS "
+                                + "não pode ser negativo"
                 );
             }
 
             return delay;
+
         } catch (
-                NumberFormatException exception) {
+                NumberFormatException exception
+        ) {
             throw new IllegalArgumentException(
-                    "COLLECTOR_DELAY_MS possui valor inválido: "
+                    "COLLECTOR_DELAY_MS possui "
+                            + "valor inválido: "
                             + configuredValue,
                     exception
             );
