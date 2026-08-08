@@ -1,11 +1,14 @@
 package com.scarlxrd.datacollector.model.service.scraper;
 
+import com.scarlxrd.datacollector.model.exception.CollectionErrorType;
+import com.scarlxrd.datacollector.model.exception.CollectionException;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import org.springframework.stereotype.Component;
-import java.util.Locale;
+
 import java.net.URI;
+import java.util.Locale;
 
 @Component
 public class MercadoLivreScraper
@@ -18,8 +21,13 @@ public class MercadoLivreScraper
 
     @Override
     public boolean supports(URI uri) {
-        return hostMatches(uri, "mercadolivre.com.br")
-                || hostMatches(uri, "mercadolivre.com");
+        return hostMatches(
+                uri,
+                "mercadolivre.com.br"
+        ) || hostMatches(
+                uri,
+                "mercadolivre.com"
+        );
     }
 
     @Override
@@ -28,13 +36,19 @@ public class MercadoLivreScraper
             WebDriverWait wait,
             String url
     ) {
-        validatePage(driver);
+        validatePage(
+                driver,
+                url
+        );
+
         String model = waitForValue(
                 wait,
                 currentDriver -> firstNonBlank(
                         firstText(
                                 currentDriver,
-                                By.cssSelector("h1.ui-pdp-title"),
+                                By.cssSelector(
+                                        "h1.ui-pdp-title"
+                                ),
                                 By.cssSelector(
                                         ".ui-pdp-header__title-container h1"
                                 ),
@@ -48,7 +62,9 @@ public class MercadoLivreScraper
                                 )
                         )
                 ),
-                "Nome do produto"
+                "Nome do produto",
+                CollectionErrorType.SELECTOR_CHANGED,
+                url
         );
 
         String rawPrice = waitForValue(
@@ -64,18 +80,27 @@ public class MercadoLivreScraper
                                         "meta[property='product:price:amount']"
                                 )
                         ),
-                        capturePriceParts(currentDriver)
+                        capturePriceParts(
+                                currentDriver
+                        )
                 ),
-                "Preço"
+                "Preço",
+                CollectionErrorType.PRICE_NOT_FOUND,
+                url
         );
 
         return new ScrapedProduct(
                 model,
-                PriceParser.parse(rawPrice)
+                parsePrice(
+                        rawPrice,
+                        url
+                )
         );
     }
 
-    private String capturePriceParts(WebDriver driver) {
+    private String capturePriceParts(
+            WebDriver driver
+    ) {
         String whole = firstText(
                 driver,
                 By.cssSelector(
@@ -88,7 +113,8 @@ public class MercadoLivreScraper
                 )
         );
 
-        if (whole == null || whole.isBlank()) {
+        if (whole == null
+                || whole.isBlank()) {
             return null;
         }
 
@@ -104,38 +130,71 @@ public class MercadoLivreScraper
                 )
         );
 
-        return cents == null || cents.isBlank()
+        return cents == null
+                || cents.isBlank()
                 ? whole
                 : whole + "," + cents;
     }
 
-    private void validatePage(WebDriver driver) {
-    String body = firstTextContent(
-            driver,
-            By.tagName("body")
-    );
-
-    if (body == null || body.isBlank()) {
-        throw new IllegalStateException(
-                "Mercado Livre retornou uma página vazia"
-        );
-    }
-
-    String normalizedBody =
-            body.toLowerCase(Locale.ROOT);
-
-    if (
-            normalizedBody.contains(
-                    "hubo un error accediendo a esta pagina"
-            )
-                    || normalizedBody.contains(
-                    "ir a la página principal"
-            )
+    private void validatePage(
+            WebDriver driver,
+            String url
     ) {
-        throw new IllegalStateException(
-                "Mercado Livre retornou uma página de erro "
-                        + "em vez da página do produto"
+        String body = firstTextContent(
+                driver,
+                By.tagName("body")
         );
+
+        if (body == null
+                || body.isBlank()) {
+
+            throw new CollectionException(
+                    CollectionErrorType.UNKNOWN,
+                    Store.MERCADO_LIVRE,
+                    url,
+                    "Mercado Livre retornou uma página vazia"
+            );
+        }
+
+        String normalizedBody =
+                body.toLowerCase(
+                        Locale.ROOT
+                );
+
+        if (
+                normalizedBody.contains(
+                        "hubo un error accediendo a esta pagina"
+                )
+                        || normalizedBody.contains(
+                        "ir a la página principal"
+                )
+        ) {
+            throw new CollectionException(
+                    CollectionErrorType.UNKNOWN,
+                    Store.MERCADO_LIVRE,
+                    url,
+                    "Mercado Livre retornou uma página de erro "
+                            + "em vez da página do produto"
+            );
+        }
+
+        if (
+                normalizedBody.contains(
+                        "captcha"
+                )
+                        || normalizedBody.contains(
+                        "verifique que você é humano"
+                )
+                        || normalizedBody.contains(
+                        "verifique que voce e humano"
+                )
+        ) {
+            throw new CollectionException(
+                    CollectionErrorType.ANTI_BOT_BLOCKED,
+                    Store.MERCADO_LIVRE,
+                    url,
+                    "Mercado Livre solicitou verificação anti-bot"
+            );
+        }
     }
-}
 }

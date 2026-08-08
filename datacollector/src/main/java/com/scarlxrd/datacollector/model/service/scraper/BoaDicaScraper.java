@@ -1,15 +1,16 @@
 package com.scarlxrd.datacollector.model.service.scraper;
 
+import com.scarlxrd.datacollector.model.exception.CollectionErrorType;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import org.springframework.stereotype.Component;
 
-
 import java.net.URI;
 
 @Component
-public class BoaDicaScraper extends AbstractSeleniumScraper {
+public class BoaDicaScraper
+        extends AbstractSeleniumScraper {
 
     @Override
     public Store store() {
@@ -18,28 +19,46 @@ public class BoaDicaScraper extends AbstractSeleniumScraper {
 
     @Override
     public boolean supports(URI uri) {
-        return hostMatches(uri, "boadica.com.br");
+        return hostMatches(
+                uri,
+                "boadica.com.br"
+        );
     }
 
     @Override
     protected ScrapedProduct capture(
-                WebDriver driver,
-                WebDriverWait wait,
-                String url
-        ) {
+            WebDriver driver,
+            WebDriverWait wait,
+            String url
+    ) {
         String model = firstText(
                 driver,
-                By.cssSelector(".nome-produto"),
-                By.cssSelector("div.nome-produto")
+                By.cssSelector(
+                        ".nome-produto"
+                ),
+                By.cssSelector(
+                        "div.nome-produto"
+                )
         );
 
         if (!isValidModel(model)) {
-                model = normalizePageTitle(driver.getTitle());
+            model =
+                    normalizePageTitle(
+                            driver.getTitle()
+                    );
         }
 
         if (!isValidModel(model)) {
-                model = extractModelFromUrl(url);
+            model =
+                    extractModelFromUrl(url);
         }
+
+        model = required(
+                model,
+                "Nome do produto",
+                CollectionErrorType.SELECTOR_CHANGED,
+                url
+        );
 
         String rawPrice = waitForValue(
                 wait,
@@ -53,7 +72,9 @@ public class BoaDicaScraper extends AbstractSeleniumScraper {
                         ),
                         firstTextContent(
                                 currentDriver,
-                                By.cssSelector("[itemprop='price']"),
+                                By.cssSelector(
+                                        "[itemprop='price']"
+                                ),
                                 By.xpath(
                                         "//*[contains("
                                                 + "normalize-space(text()), "
@@ -61,55 +82,94 @@ public class BoaDicaScraper extends AbstractSeleniumScraper {
                                 )
                         )
                 ),
-                "Preço"
+                "Preço",
+                CollectionErrorType.PRICE_NOT_FOUND,
+                url
         );
 
         return new ScrapedProduct(
                 model,
-                PriceParser.parse(rawPrice)
+                parsePrice(
+                        rawPrice,
+                        url
+                )
         );
-        }
+    }
 
-        private boolean isValidModel(String model) {
+    private boolean isValidModel(
+            String model
+    ) {
         return model != null
                 && !model.isBlank()
-                && !model.equalsIgnoreCase("BoaDica")
-                && !model.equalsIgnoreCase("Informações do Produto")
-                && !model.contains("Informações");
+                && !model.equalsIgnoreCase(
+                        "BoaDica"
+                )
+                && !model.equalsIgnoreCase(
+                        "Informações do Produto"
+                )
+                && !model.contains(
+                        "Informações"
+                );
+    }
+
+    private String extractModelFromUrl(
+            String url
+    ) {
+        String path =
+                URI.create(url)
+                        .getPath();
+
+        if (path == null
+                || path.isBlank()) {
+            return null;
         }
 
-        private String extractModelFromUrl(String url) {
-        String path = URI.create(url).getPath();
-        String[] parts = path.split("/");
+        String[] parts =
+                path.split("/");
 
-        for (int index = parts.length - 1; index >= 0; index--) {
-                if (!parts[index].isBlank()) {
+        for (
+                int index = parts.length - 1;
+                index >= 0;
+                index--
+        ) {
+            if (!parts[index].isBlank()) {
                 return parts[index]
-                        .replace("-", " ")
-                        .replace("_", " ")
+                        .replace(
+                                "-",
+                                " "
+                        )
+                        .replace(
+                                "_",
+                                " "
+                        )
                         .toUpperCase();
-                }
+            }
         }
 
-        throw new IllegalStateException(
-                "Não foi possível extrair o modelo da URL: " + url
-        );
-        }
+        return null;
+    }
 
     private String normalizePageTitle(
             String pageTitle
     ) {
-        if (pageTitle == null || pageTitle.isBlank()) {
+        if (pageTitle == null
+                || pageTitle.isBlank()) {
             return null;
         }
 
-        String title = pageTitle
-                .replace("BoaDica - ", "")
-                .trim();
+        String title =
+                pageTitle
+                        .replace(
+                                "BoaDica - ",
+                                ""
+                        )
+                        .trim();
 
         if (
                 title.isBlank()
-                        || title.equalsIgnoreCase("BoaDica")
+                        || title.equalsIgnoreCase(
+                        "BoaDica"
+                )
         ) {
             return null;
         }

@@ -1,5 +1,7 @@
 package com.scarlxrd.datacollector.model.service.scraper;
 
+import com.scarlxrd.datacollector.model.exception.CollectionErrorType;
+import com.scarlxrd.datacollector.model.exception.CollectionException;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.support.ui.WebDriverWait;
@@ -18,66 +20,112 @@ public class ShopeeScraper
 
     @Override
     public boolean supports(URI uri) {
-        return hostMatches(uri, "shopee.com.br")
-                || hostMatches(uri, "shp.ee");
+        return hostMatches(
+                uri,
+                "shopee.com.br"
+        ) || hostMatches(
+                uri,
+                "shp.ee"
+        );
     }
-@Override
-protected ScrapedProduct capture(
-        WebDriver driver,
-        WebDriverWait wait,
-        String url
-) {
-    validatePage(driver);
 
-    String model = waitForValue(
-            wait,
-            currentDriver -> firstNonBlank(
-                    firstAttribute(
-                            currentDriver,
-                            "content",
-                            By.cssSelector(
-                                    "meta[property='og:title']"
-                            )
-                    ),
-                    firstText(
-                            currentDriver,
-                            By.cssSelector("h1")
-                    )
-            ),
-            "Nome do produto"
-    );
+    @Override
+    protected ScrapedProduct capture(
+            WebDriver driver,
+            WebDriverWait wait,
+            String url
+    ) {
+        validatePage(
+                driver,
+                url
+        );
 
-    String rawPrice = waitForValue(
-            wait,
-            currentDriver -> firstNonBlank(
-                    firstAttribute(
-                            currentDriver,
-                            "content",
-                            By.cssSelector(
-                                    "meta[property='product:price:amount']"
-                            ),
-                            By.cssSelector(
-                                    "meta[property='og:price:amount']"
-                            )
-                    )
-            ),
-            "Preço"
-    );
-
-    return new ScrapedProduct(
-            model,
-            PriceParser.parse(rawPrice)
-    );
-}
-
-    private void validatePage(WebDriver driver) {
-            String currentUrl = driver.getCurrentUrl();
-
-            if (currentUrl.contains("/verify/traffic/error")) {
-                throw new IllegalStateException(
-                        "A Shopee bloqueou o acesso automatizado e "
-                                + "redirecionou para a verificação de tráfego"
+        String model = waitForValue(
+                wait,
+                currentDriver -> {
+                validatePage(
+                        currentDriver,
+                        url
                 );
-            }
+
+                return firstNonBlank(
+                        firstAttribute(
+                                currentDriver,
+                                "content",
+                                By.cssSelector(
+                                        "meta[property='og:title']"
+                                )
+                        ),
+                        firstText(
+                                currentDriver,
+                                By.cssSelector("h1")
+                        )
+                );
+                },
+                "Nome do produto",
+                CollectionErrorType.SELECTOR_CHANGED,
+                url
+        );
+        String rawPrice = waitForValue(
+                wait,
+                currentDriver -> {
+                validatePage(
+                        currentDriver,
+                        url
+                );
+
+                return firstNonBlank(
+                        firstAttribute(
+                                currentDriver,
+                                "content",
+                                By.cssSelector(
+                                        "meta[property='product:price:amount']"
+                                ),
+                                By.cssSelector(
+                                        "meta[property='og:price:amount']"
+                                )
+                        )
+                );
+                },
+                "Preço",
+                CollectionErrorType.PRICE_NOT_FOUND,
+                url
+        );
+
+        return new ScrapedProduct(
+                model,
+                parsePrice(
+                        rawPrice,
+                        url
+                )
+        );
+    }
+
+    private void validatePage(
+            WebDriver driver,
+            String url
+    ) {
+        String currentUrl =
+                driver.getCurrentUrl();
+
+        if (
+                currentUrl != null
+                        && (
+                        currentUrl.contains(
+                                "/verify/traffic/error"
+                        )
+                                || currentUrl.contains(
+                                "/verify/traffic/"
+                        )
+                )
+        ) {
+            throw new CollectionException(
+                    CollectionErrorType.ANTI_BOT_BLOCKED,
+                    Store.SHOPEE,
+                    url,
+                    "Shopee bloqueou o acesso automatizado "
+                            + "e redirecionou para a verificação de tráfego"
+            );
         }
+    }
 }
