@@ -1,6 +1,8 @@
 package com.scarlxrd.datacollector.model.service;
 
 import com.scarlxrd.datacollector.model.entity.Product;
+import com.scarlxrd.datacollector.model.exception.CollectionErrorType;
+import com.scarlxrd.datacollector.model.exception.CollectionException;
 import com.scarlxrd.datacollector.model.service.scraper.ProductScraper;
 import com.scarlxrd.datacollector.model.service.scraper.ScrapedProduct;
 import com.scarlxrd.datacollector.model.service.scraper.Store;
@@ -18,143 +20,238 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ScraperService {
 
-    private static final ZoneId COLLECTION_ZONE =
-            ZoneId.of("America/Sao_Paulo");
+        private static final ZoneId COLLECTION_ZONE = ZoneId.of("America/Sao_Paulo");
 
-    private final List<ProductScraper> scrapers;
+        private final List<ProductScraper> scrapers;
 
-    public Product captureData(String url) {
-        URI uri = parseUri(url);
+        public Product captureData(String url) {
+                URI uri = parseUri(url);
 
-        ProductScraper scraper = scrapers.stream()
-                .filter(candidate -> candidate.supports(uri))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Nenhum scraper disponível para: "
-                                + uri.getHost()
-                ));
+                ProductScraper scraper = findScraper(uri, url);
 
-        log.info(
-                "Scraper selecionado: {}",
-                scraper.store().getDisplayName()
-        );
+                log.info(
+                                "Scraper selecionado: {}",
+                                scraper.store().getDisplayName());
 
-        /*
-         A coleta utiliza a URL original.
-          Isso preserva qualquer parâmetro que a loja
-          possa precisar para abrir a página.
-         */
-        ScrapedProduct captured = scraper.scrape(url);
+                ScrapedProduct captured = scrape(scraper, url);
 
-        Product product = new Product();
+                Product product = new Product();
 
-        product.setModel(captured.model());
-        product.setPrice(captured.price());
-        product.setStore(
-                scraper.store().getDisplayName()
-        );
-        product.setCollectionDate(
-                LocalDateTime.now(COLLECTION_ZONE)
-        );
-        product.setUrl(
-                normalizeUrlForStorage(
-                        scraper,
-                        uri,
-                        url
-                )
-        );
+                product.setModel(captured.model());
+                product.setPrice(captured.price());
+                product.setStore(scraper.store().getDisplayName());
+                product.setCollectionDate(LocalDateTime.now(COLLECTION_ZONE));
+                product.setUrl( normalizeUrlForStorage(scraper,uri));
 
-        return product;
-    }
-
-    private String normalizeUrlForStorage(
-            ProductScraper scraper,
-            URI uri,
-            String originalUrl
-    ) {
-        if (scraper.store() != Store.OLX) {
-            return originalUrl;
+                return product;
         }
 
-        String cleanedUrl =
-                removeQueryAndFragment(uri);
-
-        if (!cleanedUrl.equals(originalUrl)) {
-            log.debug(
-                    "URL da OLX normalizada para armazenamento: {}",
-                    cleanedUrl
-            );
+        private ProductScraper findScraper(
+                        URI uri,
+                        String originalUrl) {
+                return scrapers.stream()
+                                .filter(scraper -> scraper.supports(uri))
+                                .findFirst()
+                                .orElseThrow(() -> new CollectionException(
+                                                CollectionErrorType.INVALID_URL,
+                                                null,
+                                                originalUrl,
+                                                "Nenhum scraper disponível para o domínio: "
+                                                                + uri.getHost()));
         }
 
-        return cleanedUrl;
-    }
+        private ScrapedProduct scrape(
+                        ProductScraper scraper,
+                        String url) {
+                try {
+                        return scraper.scrape(url);
 
-    private String removeQueryAndFragment(
-            URI uri
-    ) {
-        String url = uri.toString();
+                } catch (CollectionException exception) {
+                        /*
+                         * O scraper já identificou corretamente
+                         * o tipo do erro.
+                         *
+                         * Não devemos transformar, por exemplo,
+                         * ANTI_BOT_BLOCKED em UNKNOWN.
+                         */
+                        throw exception;
 
-        int queryIndex = url.indexOf('?');
-        int fragmentIndex = url.indexOf('#');
-
-        int cutIndex = findFirstValidIndex(
-                queryIndex,
-                fragmentIndex
-        );
-
-        if (cutIndex == -1) {
-            return url;
+                } catch (RuntimeException exception) {
+                        /*
+                         * Fallback temporário para erros que ainda
+                         * não foram classificados pelos scrapers.
+                         */
+                        throw new CollectionException(
+                                        CollectionErrorType.UNKNOWN,
+                                        scraper.store(),
+                                        url,
+                                        "Erro não classificado durante a coleta da loja "
+                                                        + scraper.store().getDisplayName(),
+                                        exception);
+                }
         }
 
-        return url.substring(0, cutIndex);
-    }
+        private String normalizeUrlForStorage(
+                        ProductScraper scraper,
+                        URI uri) {
+                String originalUrl = uri.toString();
 
-    private int findFirstValidIndex(
-            int first,
-            int second
-    ) {
-        if (first == -1) {
-            return second;
+                String normalizedUrl;
+
+                if (scraper.store() == Store.OLX) {
+                        /*
+                         * URLs da OLX podem conter parâmetros
+                         * extremamente longos e informações de
+                         * rastreamento que não são necessárias
+                         * para identificar o produto.
+                         */
+                        normalizedUrl = removeQueryAndFragment(uri);
+                } else {
+                        /*
+                         * Para as demais lojas preservamos a query
+                         * string, pois ela pode ser necessária,
+                         * removendo apenas o fragmento.
+                         */
+                        normalizedUrl = removeFragment(uri);
+                }
+
+                if (!normalizedUrl.equals(originalUrl)) {
+                        log.debug(
+                                        "URL normalizada para armazenamento: {} -> {}",
+                                        originalUrl,
+                                        normalizedUrl);
+                }
+
+                return normalizedUrl;
         }
 
-        if (second == -1) {
-            return first;
+        private String removeFragment(URI uri) {
+                String url = uri.toString();
+
+                int fragmentIndex = url.indexOf('#');
+
+                if (fragmentIndex == -1) {
+                        return url;
+                }
+
+                return url.substring(
+                                0,
+                                fragmentIndex);
         }
 
-        return Math.min(first, second);
-    }
+        private String removeQueryAndFragment(
+                        URI uri) {
+                String url = uri.toString();
 
-    private URI parseUri(String url) {
-        if (url == null || url.isBlank()) {
-            throw new IllegalArgumentException(
-                    "A URL não pode estar vazia"
-            );
+                int queryIndex = url.indexOf('?');
+
+                int fragmentIndex = url.indexOf('#');
+
+                int cutIndex = findFirstValidIndex(queryIndex,fragmentIndex);
+
+                if (cutIndex == -1) {return url;}
+
+                return url.substring(
+                                0,
+                                cutIndex);
         }
 
-        try {
-            URI uri = URI.create(url);
+        private int findFirstValidIndex(int first,int second) {
+                if (first == -1) {
+                        return second;
+                }
 
-            if (uri.getHost() == null) {
-                throw new IllegalArgumentException(
-                        "URL sem domínio válido: " + url
-                );
-            }
+                if (second == -1) {
+                        return first;
+                }
 
-            String scheme = uri.getScheme();
-
-            if (!"http".equalsIgnoreCase(scheme)
-                    && !"https".equalsIgnoreCase(scheme)) {
-                throw new IllegalArgumentException(
-                        "Protocolo não suportado: " + scheme
-                );
-            }
-
-            return uri;
-        } catch (IllegalArgumentException exception) {
-            throw new IllegalArgumentException(
-                    "URL inválida: " + url,
-                    exception
-            );
+                return Math.min( first, second);
         }
-    }
+
+        private URI parseUri(String url) {
+                if (url == null || url.isBlank()) {
+                        throw new CollectionException(
+                                        CollectionErrorType.INVALID_URL,
+                                        null,
+                                        url,
+                                        "A URL não pode estar vazia");
+                }
+
+                try {
+                        URI uri = URI.create(url);
+
+                        validateScheme(uri, url);
+
+                        validateHost(uri,url);
+
+                        validateUserInfo(uri,url);
+
+                        validatePort(uri,url);
+
+                        return uri;
+
+                } catch (CollectionException exception) {
+                        throw exception;
+
+                } catch (IllegalArgumentException exception) {
+                        throw new CollectionException(
+                                        CollectionErrorType.INVALID_URL,
+                                        null,
+                                        url,
+                                        "URL inválida: " + url,
+                                        exception);
+                }
+        }
+
+        private void validateScheme(URI uri,String originalUrl) {
+                String scheme = uri.getScheme();
+
+                if (scheme == null|| (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme))) {
+
+                        throw new CollectionException(
+                                        CollectionErrorType.INVALID_URL,
+                                        null,
+                                        originalUrl,
+                                        "Protocolo não suportado: "
+                                                        + scheme);
+                }
+        }
+
+        private void validateHost(URI uri,String originalUrl) {
+                String host = uri.getHost();
+
+                if (host == null|| host.isBlank()) {
+
+                        throw new CollectionException(
+                                        CollectionErrorType.INVALID_URL,
+                                        null,
+                                        originalUrl,
+                                        "URL sem domínio válido: "
+                                                        + originalUrl);
+                }
+        }
+
+        private void validateUserInfo(URI uri,String originalUrl) {
+                if (uri.getUserInfo() != null) {
+                        throw new CollectionException(
+                                        CollectionErrorType.INVALID_URL,
+                                        null,
+                                        originalUrl,
+                                        "URLs contendo usuário ou senha não são permitidas");
+                }
+        }
+
+        private void validatePort( URI uri,String originalUrl) {
+                int port = uri.getPort();
+
+                if (port != -1 && port != 80 && port != 443) {
+
+                        throw new CollectionException(
+                                        CollectionErrorType.INVALID_URL,
+                                        null,
+                                        originalUrl,
+                                        "Porta não permitida na URL: "
+                                                        + port);
+                }
+        }
 }
