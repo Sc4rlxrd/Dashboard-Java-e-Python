@@ -33,51 +33,30 @@ import java.util.stream.Stream;
         havingValue = "true",
         matchIfMissing = true
 )
-public class DataCollectorRunner
-        implements CommandLineRunner {
+public class DataCollectorRunner implements CommandLineRunner {
 
-    private static final Logger logger =
-            LoggerFactory.getLogger(
-                    DataCollectorRunner.class
-            );
+    private static final Logger logger =LoggerFactory.getLogger( DataCollectorRunner.class);
 
-    private static final String DEFAULT_URLS_FILE =
-            "/app/urls.txt";
+    private static final String DEFAULT_URLS_FILE ="/app/urls.txt";
 
-    private static final String DEFAULT_OUTPUT_FILE =
-            "/app/data/precos.json";
+    private static final String DEFAULT_OUTPUT_FILE ="/app/data/precos.json";
 
-    private static final long DEFAULT_DELAY_MS =
-            8_000L;
+    private static final long DEFAULT_DELAY_MS =8_000L;
 
     private final ProductRepository productRepository;
     private final ScraperService scraperService;
     private final ObjectMapper objectMapper;
 
-    public DataCollectorRunner(
-            ProductRepository productRepository,
-            ScraperService scraperService
-    ) {
-        this.productRepository =
-                productRepository;
+    public DataCollectorRunner(ProductRepository productRepository, ScraperService scraperService) {
+        this.productRepository = productRepository;
 
-        this.scraperService =
-                scraperService;
+        this.scraperService = scraperService;
 
-        this.objectMapper =
-                new ObjectMapper()
-                        .registerModule(
-                                new JavaTimeModule()
-                        )
-                        .disable(
-                                SerializationFeature
-                                        .WRITE_DATES_AS_TIMESTAMPS
-                        );
+        this.objectMapper =new ObjectMapper().registerModule(new JavaTimeModule()).disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     }
 
     @Override
-    public void run(String... args)
-            throws Exception {
+    public void run(String... args) throws Exception {
 
         Path urlsFile = resolvePath(
                 "COLLECTOR_URLS_FILE",
@@ -89,11 +68,9 @@ public class DataCollectorRunner
                 DEFAULT_OUTPUT_FILE
         );
 
-        long delayBetweenUrls =
-                resolveDelay();
+        long delayBetweenUrls = resolveDelay();
 
-        List<String> urls =
-                loadUrls(urlsFile);
+        List<String> urls = loadUrls(urlsFile);
 
         logger.info(
                 "Iniciando rodada de coleta com {} URL(s)",
@@ -103,11 +80,7 @@ public class DataCollectorRunner
         int successfulCollections = 0;
         int failedCollections = 0;
 
-        Map<CollectionErrorType, Integer>
-                failureCounts =
-                new EnumMap<>(
-                        CollectionErrorType.class
-                );
+        Map<CollectionErrorType, Integer>failureCounts = new EnumMap<>(CollectionErrorType.class);
 
         for (
                 int index = 0;
@@ -250,10 +223,7 @@ public class DataCollectorRunner
         );
     }
 
-    private void logCollectionFailure(
-            CollectionException exception,
-            String fallbackUrl
-    ) {
+    private void logCollectionFailure(CollectionException exception,String fallbackUrl) {
         String storeName;
 
         if (exception.getStore() == null) {
@@ -289,8 +259,7 @@ public class DataCollectorRunner
     }
 
     private void registerFailure(
-            Map<CollectionErrorType, Integer>
-                    failureCounts,
+            Map<CollectionErrorType, Integer> failureCounts,
             CollectionErrorType errorType
     ) {
         CollectionErrorType safeErrorType =
@@ -305,10 +274,7 @@ public class DataCollectorRunner
         );
     }
 
-    private void logFailureSummary(
-            Map<CollectionErrorType, Integer>
-                    failureCounts
-    ) {
+    private void logFailureSummary(Map<CollectionErrorType, Integer>failureCounts) {
         if (failureCounts.isEmpty()) {
             return;
         }
@@ -368,9 +334,7 @@ public class DataCollectorRunner
         return urls;
     }
 
-    private void exportProducts(
-            Path outputFile
-    ) throws IOException {
+    private void exportProducts(Path outputFile) throws IOException {
 
         List<Product> products =
                 productRepository.findAll();
@@ -426,10 +390,7 @@ public class DataCollectorRunner
         }
     }
 
-    private void replaceOutputFile(
-            Path temporaryFile,
-            Path outputFile
-    ) throws IOException {
+    private void replaceOutputFile(Path temporaryFile,Path outputFile) throws IOException {
 
         try {
             Files.move(
@@ -455,9 +416,7 @@ public class DataCollectorRunner
         }
     }
 
-    private void pauseBetweenUrls(
-            long delayMilliseconds
-    ) throws InterruptedException {
+    private void pauseBetweenUrls(long delayMilliseconds) throws InterruptedException {
 
         logger.debug(
                 "Aguardando {} ms antes da próxima URL",
@@ -479,10 +438,7 @@ public class DataCollectorRunner
         }
     }
 
-    private Path resolvePath(
-            String environmentVariable,
-            String defaultValue
-    ) {
+    private Path resolvePath(String environmentVariable,String defaultValue) {
         return Path.of(
                 System.getenv()
                         .getOrDefault(
