@@ -12,6 +12,12 @@ public final class PriceParser {
             throw new IllegalArgumentException("Preço vazio");
         }
 
+        if (text.matches(".*-\\s*[0-9].*")) {
+        throw new IllegalArgumentException(
+                "O preço precisa ser maior que zero: " + text
+        );
+    }
+
         String normalized = text
                 .replace('\u00A0', ' ')
                 .replaceAll("[^0-9,.]", "");
