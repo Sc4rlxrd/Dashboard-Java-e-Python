@@ -5,6 +5,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
+from components.history_chart import render_history_chart
 from components.url_form import render_url_form
 from services.url_manager import UrlManager
 
@@ -246,36 +247,9 @@ st.dataframe(
 # GRÁFICO DE HISTÓRICO
 # ==========================================================
 
-st.markdown("---")
-st.subheader("📈 Histórico de Variação (Evolução Temporal)")
-
-figure_line = px.line(
-    df_filtered,
-    x="collectionDate",
-    y="price",
-    color="model",
-    line_dash="store",
-    markers=True,
-    hover_data={
-        "store": True,
-        "model": True,
-        "price": ":.2f",
-        "collectionDate": True,
-    },
-    labels={
-        "collectionDate": "Data da coleta",
-        "price": "Preço",
-        "model": "Produto",
-        "store": "Loja",
-    },
-    title="Oscilação de Preços ao Longo do Tempo",
-    template="plotly_dark",
+render_history_chart(
+    dataframe=df_filtered
 )
-
-figure_line.update_yaxes(tickprefix="R$ ", autorange=True)
-figure_line.update_layout(legend_title_text="Produtos e lojas")
-figure_line.update_layout(showlegend=False)
-st.plotly_chart(figure_line, width="stretch")
 
 # ==========================================================
 # COMPARATIVO DA ÚLTIMA COLETA
