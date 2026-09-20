@@ -14,7 +14,7 @@ public enum Store {
     OLX("OLX"),
     KABUM("KaBuM"),
     TERABYTE("TerabyteShop"),
-    PICHAU("Pichau"),;
+    PICHAU("Pichau");
 
 
     private final String displayName;
