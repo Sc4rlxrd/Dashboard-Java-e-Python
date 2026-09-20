@@ -12,7 +12,9 @@ public enum Store {
     BOA_DICA("BoaDica"),
     SHOPEE("Shopee"),
     OLX("OLX"),
-    KABUM("KaBuM");
+    KABUM("KaBuM"),
+    TERABYTE("TerabyteShop"),
+    PICHAU("Pichau"),;
 
 
     private final String displayName;
