@@ -11,7 +11,8 @@ public enum Store {
     MERCADO_LIVRE("Mercado Livre"),
     BOA_DICA("BoaDica"),
     SHOPEE("Shopee"),
-    OLX("OLX");
+    OLX("OLX"),
+    KABUM("KaBuM");
 
 
     private final String displayName;
