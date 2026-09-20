@@ -11,15 +11,15 @@
 
 Sistema pessoal de monitoramento de preços composto por um coletor em **Java com Spring Boot e Selenium** e um dashboard em **Python com Streamlit, Pandas e Plotly**.
 
-O projeto acompanha uma lista de produtos definida manualmente, registra o histórico das coletas em um banco **H2 persistido em arquivo** e exporta os dados para um arquivo JSON consumido pelo dashboard.
+O projeto acompanha uma watchlist definida manualmente, registra o histórico das coletas em um banco **H2 persistido em arquivo** e exporta os dados para um arquivo JSON consumido pelo dashboard.
 
 ---
 
 ## 🎯 Objetivo
 
-O projeto funciona como uma watchlist pessoal para acompanhar produtos de interesse e analisar sua variação de preço ao longo do tempo.
+O projeto funciona como uma watchlist pessoal para acompanhar produtos de interesse, comparar ofertas entre lojas e analisar a variação de preços ao longo do tempo.
 
-Em vez de realizar buscas genéricas, o coletor processa somente as URLs cadastradas em:
+Em vez de realizar buscas genéricas, o collector processa somente as URLs cadastradas em:
 
 ```text
 datacollector/urls.txt
@@ -28,15 +28,19 @@ datacollector/urls.txt
 A cada execução, o sistema:
 
 1. lê a lista de URLs;
-2. identifica a loja correspondente;
-3. seleciona o scraper adequado;
-4. abre a página com Chromium em modo headless;
-5. captura nome, preço, loja, URL e data;
-6. persiste o resultado no H2;
-7. exporta o histórico completo para `precos.json`;
-8. encerra a aplicação Java.
+2. ignora comentários, linhas em branco e URLs duplicadas;
+3. valida e normaliza a URL quando necessário;
+4. identifica a loja correspondente;
+5. seleciona automaticamente o scraper adequado;
+6. abre a página com Chromium em modo headless;
+7. captura nome, preço, loja, URL e data da coleta;
+8. classifica falhas individualmente sem interromper toda a rodada;
+9. persiste os resultados válidos no H2;
+10. exporta o histórico completo para `precos.json`;
+11. registra um resumo de sucessos e falhas;
+12. encerra a aplicação Java.
 
-O dashboard lê somente o JSON gerado pelo coletor, sem acessar diretamente o banco de dados.
+O dashboard lê somente o JSON gerado pelo collector, sem acessar diretamente o banco H2.
 
 ---
 
@@ -46,32 +50,33 @@ O dashboard lê somente o JSON gerado pelo coletor, sem acessar diretamente o ba
 datacollector/urls.txt
           │
           ▼
-┌──────────────────────────────┐
-│ Collector                    │
-│                              │
-│ Java 21                      │
-│ Spring Boot 4.0.2            │
-│ Selenium WebDriver           │
-│ Chromium + ChromeDriver      │
-└──────────────┬───────────────┘
-               │
-               ├──► price-monitor.mv.db
-               │        H2 persistente
-               │
-               └──► precos.json
-                         │
-                         ▼
-              ┌──────────────────────┐
-              │ Dashboard            │
-              │                      │
-              │ Python 3.13          │
-              │ Streamlit            │
-              │ Pandas               │
-              │ Plotly               │
-              └──────────────────────┘
+┌─────────────────────────────────┐
+│ Collector                       │
+│                                 │
+│ Java 21                         │
+│ Spring Boot 4.0.2               │
+│ Selenium WebDriver              │
+│ Chromium + ChromeDriver         │
+│ Strategy por loja               │
+└───────────────┬─────────────────┘
+                │
+                ├──► price-monitor.mv.db
+                │        H2 persistente
+                │
+                └──► precos.json
+                          │
+                          ▼
+              ┌──────────────────────────┐
+              │ Dashboard                │
+              │                          │
+              │ Python 3.13              │
+              │ Streamlit                │
+              │ Pandas                   │
+              │ Plotly                   │
+              └──────────────────────────┘
 ```
 
-O coletor é uma aplicação **one-shot**: inicia, realiza a coleta, atualiza os arquivos e finaliza.
+O collector é uma aplicação **one-shot**: inicia, realiza a rodada de coleta, persiste os dados, atualiza o JSON e finaliza.
 
 O dashboard pode permanecer ativo continuamente ou ser iniciado somente depois que uma coleta terminar.
 
@@ -84,29 +89,71 @@ O dashboard pode permanecer ativo continuamente ou ser iniciado somente depois q
 - leitura das URLs a partir de arquivo externo;
 - suporte a comentários e linhas em branco;
 - remoção de URLs duplicadas;
+- validação de esquema, host, credenciais e portas permitidas;
 - detecção automática da loja;
 - arquitetura Strategy com um scraper por loja;
+- registro automático de novos scrapers como componentes Spring;
 - execução com Selenium e Chromium headless;
 - normalização de nomes e preços;
+- suporte a diferentes formatos monetários;
 - persistência histórica no H2;
 - exportação do histórico completo para JSON;
-- continuação da coleta quando uma URL individual falha;
-- resumo final com coletas bem-sucedidas e falhas;
+- continuação da rodada quando uma URL individual falha;
+- resumo final com quantidade de sucessos e falhas;
+- classificação estruturada dos erros de coleta;
 - caminhos, atrasos e níveis de log configuráveis;
 - limite de memória da JVM preparado para ambientes pequenos.
 
+### Classificação de falhas
+
+O collector diferencia os principais tipos de erro encontrados durante a coleta:
+
+```text
+NETWORK_ERROR
+TIMEOUT
+PRODUCT_NOT_FOUND
+PRODUCT_UNAVAILABLE
+PRICE_NOT_FOUND
+SELECTOR_CHANGED
+ANTI_BOT_BLOCKED
+RATE_LIMITED
+INVALID_URL
+UNKNOWN
+```
+
+Isso permite distinguir problemas de rede, alterações de seletor, produtos indisponíveis e mecanismos anti-bot sem tratar todas as falhas da mesma forma.
+
+Ao final da rodada, o sistema gera um resumo semelhante a:
+
+```text
+Coleta concluída parcialmente: 12 sucesso(s) e 3 falha(s)
+Resumo das falhas da coleta: {PRICE_NOT_FOUND=1, ANTI_BOT_BLOCKED=2}
+```
+
+Se nenhuma URL for coletada com sucesso, o processo termina com erro para sinalizar que a rodada inteira falhou.
+
 ### Dashboard
 
+- cadastro de novas URLs compatíveis diretamente pela interface;
 - filtros por loja;
 - seleção dinâmica de produtos;
-- cartões com informações resumidas;
-- histórico de preços;
-- gráfico temporal interativo;
-- detalhes disponíveis por hover;
-- tabela com registros históricos;
+- seção **🏆 Melhor Oferta Atual por Produto**;
+- seção **🔥 Quedas de Preço**;
+- comparação entre o preço atual e a coleta imediatamente anterior;
+- exibição da economia em reais e do percentual de queda;
+- seção **📈 Histórico de Variação**;
+- modo de visualização com todas as coletas ou consolidação diária;
+- destaque interativo de um produto no gráfico histórico;
+- redução visual de pontos para facilitar a leitura;
+- seção **📊 Comparativo da Última Coleta**;
+- gráfico horizontal para facilitar a leitura de nomes longos;
+- detalhes completos disponíveis por hover;
+- tabela com o histórico completo;
 - tratamento de dados ausentes;
 - formatação monetária em real brasileiro;
 - interface responsiva com Streamlit.
+
+> Um produto só aparece em **Quedas de Preço** quando possui pelo menos duas coletas e o preço mais recente é menor que o preço imediatamente anterior. Um produto recém-adicionado não é tratado automaticamente como promoção.
 
 ---
 
@@ -114,14 +161,20 @@ O dashboard pode permanecer ativo continuamente ou ser iniciado somente depois q
 
 | Loja | Situação | Observação |
 |---|---|---|
-| Amazon | ✅ Funcional | Melhor resultado com URLs diretas de produto |
-| BoaDica | ✅ Funcional | Produtos indisponíveis podem não fornecer dados |
-| Mercado Livre | ⚠️ Temporariamente desativado | Algumas requisições automatizadas retornam página de erro ou bloqueio |
-| Shopee | 🧪 Experimental | O tráfego automatizado pode ser redirecionado para verificação |
+| Amazon | ✅ Funcional | Coleta ativa com Selenium |
+| BoaDica | ✅ Funcional | Coleta ativa; produtos indisponíveis podem não fornecer preço |
+| KaBuM | ✅ Funcional | Coleta ativa com captura de preço à vista/PIX |
+| Mercado Livre | 🧪 Experimental | Integração mantida desativada na watchlist |
+| Shopee | 🧪 Experimental | Pode redirecionar o Chromium para verificação de tráfego |
+| OLX | 🧪 Experimental | Proteções anti-bot podem responder com HTTP 403 |
+| Pichau | 🧪 Experimental | Em testes, o Chromium recebeu a página `Site em Manutenção - Pru Pru` |
+| TerabyteShop | 🧪 Experimental | Cloudflare pode manter o Chromium na página `Just a moment...` |
 
-A arquitetura permite adicionar novos sites criando uma implementação específica de scraper sem concentrar todas as regras em uma única classe.
+As URLs das integrações experimentais permanecem comentadas em `datacollector/urls.txt`, evitando que sejam executadas nas rodadas normais.
 
-> Sites de comércio eletrônico podem alterar o HTML, os seletores ou as políticas antiautomação sem aviso. Por isso, os scrapers podem precisar de manutenção periódica.
+A arquitetura permite adicionar novas lojas criando uma implementação de `ProductScraper` sem concentrar todas as regras em uma única classe.
+
+> Sites de comércio eletrônico podem alterar HTML, seletores, disponibilidade, preços e políticas de automação sem aviso. Por isso, os scrapers podem precisar de manutenção periódica.
 
 ---
 
@@ -162,12 +215,16 @@ A arquitetura permite adicionar novos sites criando uma implementação específ
 - QEMU
 - GitHub Container Registry
 - imagens Linux AMD64 e ARM64
+- systemd
+- Nginx
+- Terraform
+- Oracle Cloud
 
 ---
 
 ## 💾 Persistência dos dados
 
-Os dados são armazenados no diretório:
+Os dados são armazenados localmente no diretório:
 
 ```text
 dadosParaDashBoards/
@@ -192,7 +249,7 @@ O banco é aberto dentro da própria JVM do collector e encerrado quando a aplic
 
 Arquivo exportado pelo collector e consumido pelo dashboard Streamlit.
 
-O dashboard monta o diretório como somente leitura.
+O dashboard monta o diretório de dados como somente leitura.
 
 > Os arquivos de banco e histórico não devem ser adicionados ao Git.
 
@@ -206,6 +263,12 @@ O dashboard monta o diretório como somente leitura.
 │   └── workflows/
 │       ├── ci.yaml
 │       └── publish-images.yaml
+│
+├── components/
+│   ├── history_chart.py
+│   ├── latest_comparison_chart.py
+│   ├── price_drop_cards.py
+│   └── url_form.py
 │
 ├── dadosParaDashBoards/
 │   ├── .gitkeep
@@ -239,7 +302,25 @@ O dashboard monta o diretório como somente leitura.
 
 ![Dashboard Scarlxrd](image.png)
 
-O dashboard exibe os dados históricos criados pelo coletor e permite acompanhar a evolução de preços por loja e por produto.
+O dashboard exibe os dados históricos criados pelo collector e permite acompanhar preços atuais, melhores ofertas, quedas recentes e a evolução temporal dos produtos monitorados.
+
+A interface atual organiza as informações na seguinte ordem:
+
+```text
+Cadastro de URL
+      ↓
+Filtros
+      ↓
+🏆 Melhor Oferta Atual por Produto
+      ↓
+🔥 Quedas de Preço
+      ↓
+📈 Histórico de Variação
+      ↓
+📊 Comparativo da Última Coleta
+      ↓
+📋 Histórico Completo
+```
 
 ---
 
@@ -271,17 +352,40 @@ Edite:
 nano datacollector/urls.txt
 ```
 
-Adicione uma URL por linha:
+O arquivo é organizado entre lojas ativas e integrações experimentais.
+
+Exemplo:
 
 ```text
+# =========================================================
+# LOJAS ATIVAS
+# =========================================================
+
 # Amazon
 https://www.amazon.com.br/...
 
 # BoaDica
-https://www.boadica.com.br/...
+https://boadica.com.br/...
+
+# KaBuM
+https://www.kabum.com.br/...
+
+
+# =========================================================
+# LOJAS EXPERIMENTAIS / DESATIVADAS
+# =========================================================
+
+# OLX
+#https://rj.olx.com.br/...
+
+# Pichau
+#https://www.pichau.com.br/...
+
+# TerabyteShop
+#https://www.terabyteshop.com.br/...
 ```
 
-Linhas vazias e linhas iniciadas por `#` são ignoradas.
+Linhas vazias e linhas iniciadas por `#` são ignoradas pelo collector.
 
 ---
 
@@ -305,14 +409,37 @@ docker compose \
   build dashboard collector
 ```
 
+Para forçar um rebuild completo do collector sem utilizar o cache:
+
+```bash
+docker compose build --no-cache collector
+```
+
+Para realizar o rebuild sem cache e executar imediatamente:
+
+```bash
+docker compose build --no-cache collector && \
+docker compose --profile collector run --rm collector
+```
+
 ---
 
 ## 4. Executar o collector
+
+Utilizando a imagem já construída:
 
 ```bash
 docker compose \
   --profile collector \
   run --rm collector
+```
+
+Reconstruindo somente as camadas alteradas antes da execução:
+
+```bash
+docker compose \
+  --profile collector \
+  run --rm --build collector
 ```
 
 O collector deverá:
@@ -324,11 +451,17 @@ abrir o H2 persistente
         ↓
 carregar urls.txt
         ↓
-coletar os produtos
+identificar o scraper de cada URL
         ↓
-salvar os registros
+coletar os produtos disponíveis
+        ↓
+classificar falhas individuais
+        ↓
+salvar os registros válidos
         ↓
 atualizar precos.json
+        ↓
+exibir o resumo da rodada
         ↓
 encerrar
 ```
@@ -570,6 +703,14 @@ Durante os testes, o runner de coleta é desativado para impedir:
 - scraping durante a CI;
 - alterações nos arquivos persistentes.
 
+A suíte possui cobertura unitária para partes centrais do collector, incluindo:
+
+- `CollectionException`;
+- classificação de falhas;
+- `PriceParser`;
+- `ScraperService`;
+- carregamento do contexto Spring.
+
 Execute localmente:
 
 ```bash
@@ -579,6 +720,12 @@ cd datacollector
   --batch-mode \
   --no-transfer-progress \
   clean verify
+```
+
+Ou com Maven instalado no sistema:
+
+```bash
+mvn clean test
 ```
 
 Resultado esperado:
@@ -674,6 +821,8 @@ Durante o build:
 3. somente o JAR final é copiado para a imagem de runtime;
 4. Chromium, ChromeDriver e fontes são instalados.
 
+O Dockerfile utiliza cache do Maven durante o build para acelerar recompilações. Quando necessário, o cache pode ser ignorado com `docker compose build --no-cache collector`.
+
 ## Dashboard
 
 O dashboard utiliza:
@@ -713,49 +862,68 @@ O projeto aplica algumas medidas básicas:
 # ⚠️ Limitações
 
 - alterações no HTML das lojas podem quebrar seletores;
-- preços podem variar de acordo com usuário, região, estoque ou sessão;
+- preços podem variar conforme usuário, região, estoque, sessão ou forma de pagamento;
 - páginas podem exigir cookies, CAPTCHA ou verificação de tráfego;
-- Mercado Livre possui bloqueios que afetam a coleta automatizada;
-- Shopee redireciona algumas execuções headless para verificação;
+- Amazon pode apresentar comportamento diferente dependendo do ambiente ou IP de origem;
+- Mercado Livre permanece experimental;
+- Shopee pode redirecionar sessões headless para verificação;
+- OLX pode responder com HTTP 403 devido à proteção anti-bot;
+- Pichau permanece experimental enquanto as sessões automatizadas recebem a página de manutenção;
+- TerabyteShop permanece experimental devido à proteção do Cloudflare;
 - produtos removidos ou indisponíveis podem não retornar preço;
-- a execução ARM64 em uma máquina AMD64 depende de emulação e será mais lenta;
+- integrações experimentais não fazem parte da rodada padrão da watchlist;
+- a execução ARM64 em máquina AMD64 depende de emulação e será mais lenta;
 - o sistema foi desenvolvido para uso pessoal e não representa uma plataforma comercial.
 
 ---
 
+# ☁️ Implantação na Oracle Cloud
 
-# ☁️ Arquitetura planejada para Oracle Cloud
+A implantação em Oracle Cloud utiliza uma VM separada do repositório da aplicação.
 
-Na futura implantação, o funcionamento previsto é:
+O fluxo de produção utiliza as imagens previamente publicadas no GHCR, evitando builds pesados diretamente na VM.
+
+Estrutura geral:
 
 ```text
-Estado normal
+Oracle VM
+│
 ├── Nginx
-└── Dashboard Streamlit
-
-Horário programado da coleta
-├── dashboard é interrompido
-├── Nginx pode ser interrompido temporariamente
-├── collector Java inicia
-├── H2 abre dentro da JVM
-├── Chromium realiza as coletas
-├── histórico e JSON são atualizados
-├── collector finaliza
-├── dashboard inicia novamente
-└── Nginx volta a disponibilizar a aplicação
+│
+├── Dashboard Streamlit
+│
+├── dados persistentes
+│   ├── price-monitor.mv.db
+│   └── precos.json
+│
+└── Collector one-shot
+        │
+        ├── Java
+        ├── Selenium
+        └── Chromium
 ```
 
-Essa estratégia permite liberar o máximo possível de memória para Java, Selenium e Chromium durante a coleta.
+O collector é acionado periodicamente por `systemd timer`.
 
-O agendamento será realizado por:
+Durante uma rodada:
 
 ```text
-systemd service
-        +
-systemd timer
+timer dispara
+      ↓
+collector inicia
+      ↓
+H2 é aberto
+      ↓
+Chromium realiza as coletas
+      ↓
+histórico e JSON são atualizados
+      ↓
+collector finaliza
+      ↓
+dashboard continua utilizando o JSON persistido
 ```
 
-A infraestrutura será provisionada por Terraform e utilizará as imagens prontas do GHCR, evitando builds dentro da VM.
+A infraestrutura da VM é mantida separadamente e utiliza Terraform, scripts de bootstrap e automações próprias de deploy.
 
 ---
 
@@ -769,6 +937,9 @@ Além de atender uma necessidade pessoal, este repositório é utilizado como la
 - Python;
 - Streamlit;
 - persistência de dados;
+- tratamento e classificação de erros;
+- arquitetura Strategy;
+- testes automatizados;
 - Docker;
 - Docker Compose;
 - imagens multi-arquitetura;
@@ -800,4 +971,4 @@ https://github.com/Sc4rlxrd
 
 Projeto de uso pessoal e educacional.
 
-Os preços apresentados dependem das informações disponíveis nas páginas monitoradas e podem não refletir promoções condicionais, frete, cupons, variações regionais ou alterações realizadas pelas lojas.
+Os preços apresentados dependem das informações disponíveis nas páginas monitoradas e podem não refletir promoções condicionais, frete, cupons, variações regionais, formas de pagamento específicas ou alterações realizadas pelas lojas.
