@@ -8,6 +8,8 @@ import streamlit as st
 from components.history_chart import render_history_chart
 from components.url_form import render_url_form
 from services.url_manager import UrlManager
+from components.latest_comparison_chart import render_latest_comparison_chart
+from components.price_drop_cards import render_price_drop_cards
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -36,6 +38,7 @@ URLS_FILE = Path(
 SUPPORTED_STORES = {
     "amazon.com.br": "Amazon",
     "boadica.com.br": "BoaDica",
+    "kabum.com.br": "KaBuM",
 }
 
 
@@ -173,44 +176,6 @@ if df_filtered.empty:
     st.info("Nenhum produto encontrado para os filtros selecionados.")
     st.stop()
 
-# ==========================================================
-# CARDS DA ÚLTIMA COLETA
-# ==========================================================
-
-latest_products = (
-    df_filtered.sort_values("collectionDate")
-    .groupby(["store", "model"], as_index=False)
-    .tail(1)
-    .sort_values("collectionDate", ascending=False)
-    .head(5)
-)
-
-columns = st.columns(len(latest_products)) if len(latest_products) else [st]
-
-for column, (_, product) in zip(columns, latest_products.iterrows()):
-    product_history = df_filtered[
-        (df_filtered["model"] == product["model"])
-        & (df_filtered["store"] == product["store"])
-        ]
-
-    current_price = product["price"]
-    minimum_price = product_history["price"].min()
-    difference = current_price - minimum_price
-    percent_diff = (
-        (difference / minimum_price * 100) if minimum_price else 0
-    )
-
-    if difference <= 0:
-        delta = "Menor preço histórico"
-    else:
-        delta = f"+{percent_diff:.1f}% (R$ {difference:,.2f}) acima do mínimo"
-
-    column.metric(
-        label=f"{product['model'][:20]} · {product['store']}",
-        value=f"R$ {current_price:,.2f}",
-        delta=delta,
-        delta_color="inverse",
-    )
 
 # ==========================================================
 # MELHOR OFERTA ATUAL POR PRODUTO (entre lojas)
@@ -255,34 +220,18 @@ render_history_chart(
 # COMPARATIVO DA ÚLTIMA COLETA
 # ==========================================================
 
-st.markdown("---")
-st.subheader("📊 Comparativo da Última Coleta")
-
-latest_collection = (
-    df_filtered.sort_values("collectionDate")
-    .groupby(["store", "model"], as_index=False)
-    .tail(1)
+render_latest_comparison_chart(
+    dataframe=df_filtered,
 )
 
-figure_bar = px.bar(
-    latest_collection,
-    x="model",
-    y="price",
-    color="store",
-    barmode="group",
-    text_auto=".2f",
-    template="plotly_dark",
-    labels={"model": "Produto", "price": "Preço", "store": "Loja"},
+# ==========================================================
+# QUEDAS DE PREÇO
+# ==========================================================
+
+render_price_drop_cards(
+    dataframe=df_filtered,limit=10
 )
 
-figure_bar.update_yaxes(tickprefix="R$ ")
-figure_bar.update_layout(
-    xaxis_title="Produto",
-    yaxis_title="Preço atual",
-    legend_title_text="Loja",
-)
-
-st.plotly_chart(figure_bar, width="stretch")
 
 # ==========================================================
 # TABELA + EXPORT
