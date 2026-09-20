@@ -10,7 +10,7 @@ def render_url_form( url_manager: UrlManager,) -> None:
     ):
         st.write(
             "Cole abaixo o endereço de um produto "
-            "da Amazon ou do BoaDica."
+            "da Amazon, BoaDica ou KaBuM para adicioná-lo ao monitoramento."
         )
 
         st.caption(
