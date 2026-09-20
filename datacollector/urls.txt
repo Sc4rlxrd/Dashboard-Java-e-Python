@@ -1,4 +1,8 @@
-# AMAZON
+
+# ---------------------------------------------------------
+# Amazon
+# ---------------------------------------------------------
+
 https://www.amazon.com.br/gp/product/B0CJLFQP4W/ref=ox_sc_act_title_1?smid=A1ZZFT5FULY4LN&psc=1
 https://www.amazon.com.br/gp/product/B0D8V3QLDD/ref=ox_sc_act_title_1?smid=A1ZZFT5FULY4LN&psc=1
 https://www.amazon.com.br/gp/product/B0GWNKJDCZ/ref=ewc_pr_img_1?smid=A1NONSEYG0U0QA&psc=1
@@ -14,10 +18,19 @@ https://www.amazon.com.br/Male-Parfum-Jean-Paul-Gaultier/dp/B08FBQWRYC/ref=pd_bx
 https://www.amazon.com.br/Lan%C3%A7amento-Bad-Boy-100ml-Brinde/dp/B07VQK6Q1H/?_encoding=UTF8&ref_=pd_hp_d_btf_ci_mcx_mr_ca_id_hp_d
 https://www.amazon.com.br/Estilo-Pulso-Pulseira-compat%C3%ADvel-Active/dp/B0DK11B566/ref=sr_1_17?sr=8-17
 https://www.amazon.com.br/Caixa-Boombox-BBS-01-B-Bluetooth-Preto/dp/B0D7W6Q7L9/ref=sr_1_5?sr=8-5
+https://www.amazon.com.br/Male-Parfum-Jean-Paul-Gaultier/dp/B08FBQWRYC/ref=pd_bxgy_d_sccl_1/132-1704251-3793741?psc=1
+https://www.amazon.com.br/Azzaro-Masculino-Fragr%C3%A2ncia-Amadeirada-Cardamomo/dp/B08ZFKB8ZK/ref=pd_bxgy_d_sccl_2/132-1704251-3793741
+https://www.amazon.com.br/Perfume-Masculino-Black-Carolina-Herrera/dp/B074Z9QH5F/ref=pd_bxgy_d_sccl_2/132-1704251-3793741?psc=1
+https://www.amazon.com.br/Caixa-Boombox-BBS-01-B-Bluetooth-Preto/dp/B0D7W6Q7L9/?_encoding=UTF8
+https://www.amazon.com.br/Rayhaan-Elixir-Parfum-Spray-unissex/dp/B0D3J47MVZ/ref=pd_rhf_dp_s_pd_crcd_d_sccl_2_25/132-1704251-3793741
+https://www.amazon.com.br/dp/B0FHHLZZVD?psc=1&ref=cm_sw_r_cso_cp_apan_ct_6F1Y75D9C99VFANNSSVS&ref_=cm_sw_r_cso_cp_apan_ct_6F1Y75D9C99VFANNSSVS&social_share=cm_sw_r_cso_cp_apan_ct_6F1Y75D9C99VFANNSSVS
+https://www.amazon.com.br/gp/aw/d/B0DYC2GV1Z/ref=ods_gw_WD_BR_PT_AUCC_MDL_HP-BAU_MSO/?ie=UTF8
 
-#  MERCADO LIVRE — temporariamente desativado
 
-# BOA DICA
+# ---------------------------------------------------------
+# BoaDica
+# ---------------------------------------------------------
+
 https://boadica.com.br/produtos/p207535/thinkpad-t14-gen-4-21hesg6c00
 https://boadica.com.br/produtos/p211057/f7-12gb512gb-black-preto
 https://boadica.com.br/produtos/p199610/iphone-15-128gb-desbloqueado-fabrica-preto
@@ -25,25 +38,61 @@ https://boadica.com.br/produtos/p206264/14t-pro-512gb--12gb-titan-gray-
 https://boadica.com.br/produtos/p206808/nitro-v1
 https://boadica.com.br/produtos/p214615/core-i5-12400f-161rtx-3050600w
 https://boadica.com.br/produtos/p170200/switch-lite-32gb-cinza-hdh-001
+https://boadica.com.br/produtos/p193469/thinkpad-l13-20r4002ubr
 
 
-# SHOPEE — temporariamente desativado
-# A Shopee redireciona o Chromium para /verify/traffic/error
-#https://shopee.com.br/product/1385382926/23398006332?d_id=52e36&rModelId=129647556065&uls_trackid=566gbf04003d
+# ---------------------------------------------------------
+# KaBuM
+# ---------------------------------------------------------
 
-# OLX — temporariamente desativada por bloqueio HTTP 403 por proteção anti-bot
-#https://rj.olx.com.br/rio-de-janeiro-e-regiao/celulares/iphone-16-128-gb-1521095163?rec=u&custom_tag=home_editorial_categories&gallery_id=home_editorial_categories&tab_id=tudo&is_fallback=false&page=home&rec_detail_location=home&rec_detail_engine=search&rec_detail_recommendation=editorial_categories&lis=home_editorial_categories%7CNA%7Chome_editorial_categories%7C0
-#https://rj.olx.com.br/rio-de-janeiro-e-regiao/autos-e-pecas/carros-vans-e-utilitarios/volkswagen-gol-geracao-iii-power-1-6-mi-8v-gasolina-mec-4p-2003-1521516518?lis=listing_2020
-
-
-# Kabum
 https://www.kabum.com.br/produto/996095/notebook-gamer-predator-helios-neo-16-ai-phn16-73-96sw-intel-core-ultra-9-275hx-32gb-ram-1tb-ssd-rtx-5070-16-
 https://www.kabum.com.br/produto/1039203/ssd-kingston-480gb-sata-iii-a400-sa400s37-480g-preto
 
 
-# URLs adicionadas pelo dashboard
-https://boadica.com.br/produtos/p192602/boombox-3-jblboombox3blkbr-preto
-https://boadica.com.br/produtos/p214256/hmaa2gs6ajr8n-xn
-https://www.amazon.com.br/RAYHAAN-Lion-Parfum-Spray-homens/dp/B0DQFL8H9V/ref=pd_rhf_gw_s_pd_sbs_rvi_d_sccl_1_23/132-1704251-3793741?psc=1
-https://www.kabum.com.br/produto/934759/console-sony-playstation-5-com-leitor-de-discos-ssd-1tb-controle-sem-fio-dualsense-2-jogos
+# =========================================================
+# LOJAS EXPERIMENTAIS / DESATIVADAS
+# =========================================================
 
+
+# ---------------------------------------------------------
+# Shopee
+# Experimental - redirecionamento para /verify/traffic/error
+# ---------------------------------------------------------
+
+#https://shopee.com.br/product/1385382926/23398006332?d_id=52e36&rModelId=129647556065&uls_trackid=566gbf04003d
+
+
+# ---------------------------------------------------------
+# OLX
+# Experimental - bloqueio HTTP 403 / proteção anti-bot
+# ---------------------------------------------------------
+
+#https://rj.olx.com.br/rio-de-janeiro-e-regiao/celulares/iphone-16-128-gb-1521095163?rec=u&custom_tag=home_editorial_categories&gallery_id=home_editorial_categories&tab_id=tudo&is_fallback=false&page=home&rec_detail_location=home&rec_detail_engine=search&rec_detail_recommendation=editorial_categories&lis=home_editorial_categories%7CNA%7Chome_editorial_categories%7C0
+#https://rj.olx.com.br/rio-de-janeiro-e-regiao/autos-e-pecas/carros-vans-e-utilitarios/volkswagen-gol-geracao-iii-power-1-6-mi-8v-gasolina-mec-4p-2003-1521516518?lis=listing_2020
+
+
+# ---------------------------------------------------------
+# Mercado Livre
+# Experimental
+# ---------------------------------------------------------
+
+
+# ---------------------------------------------------------
+# Pichau
+# Experimental - Chromium recebe página de manutenção
+# "Site em Manutenção - Pru Pru"
+# ---------------------------------------------------------
+
+#https://www.pichau.com.br/ssd-sandisk-optimus-5100-500-gb-m-2-2280-pcie-nvme-leitura-6600-mb-s-gravacao-5600-mb-s-sdsp51500gan-000e0
+#https://www.pichau.com.br/placa-de-video-xfx-radeon-rx-7600-speedster-swft210-8gb-gddr6-128-bit-rx-76pswftfy
+#https://www.pichau.com.br/mesa-dt3-ergo-120cm-com-regulagem-de-altura-a-gas-preto-14706-8
+
+
+# ---------------------------------------------------------
+# TerabyteShop
+# Experimental - Cloudflare mantém o Chromium em
+# "Just a moment..."
+# ---------------------------------------------------------
+
+#https://www.terabyteshop.com.br/produto/41749/placa-de-video-gamer-ninja-nvidia-geforce-rtx-2070-ronin-8gb-gddr6-ray-tracing-gn-pv-nvrtx20708d6
+#https://www.terabyteshop.com.br/produto/40917/placa-de-video-gamer-ninja-nvidia-geforce-rtx-2060-ronin-6gb-gddr6-ray-tracing-gn-pv-nvrtx20606d6
