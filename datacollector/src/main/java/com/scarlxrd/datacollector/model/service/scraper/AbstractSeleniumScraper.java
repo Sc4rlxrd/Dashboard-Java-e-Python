@@ -5,6 +5,7 @@ import com.scarlxrd.datacollector.model.exception.CollectionException;
 import lombok.extern.slf4j.Slf4j;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
+import org.openqa.selenium.PageLoadStrategy;
 import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebDriverException;
@@ -18,17 +19,36 @@ import java.io.File;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.time.Duration;
-import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.function.Function;
 
 @Slf4j
-public abstract class AbstractSeleniumScraper
-        implements ProductScraper {
+public abstract class AbstractSeleniumScraper implements ProductScraper {
 
     private static final Duration PAGE_LOAD_TIMEOUT = Duration.ofSeconds(45);
 
     private static final Duration ELEMENT_TIMEOUT = Duration.ofSeconds(30);
+
+    protected Duration pageLoadTimeout() {
+        return PAGE_LOAD_TIMEOUT;
+    }
+
+    protected Duration elementTimeout() {
+        return ELEMENT_TIMEOUT;
+    }
+
+    protected PageLoadStrategy pageLoadStrategy() {
+        return PageLoadStrategy.NORMAL;
+    }
+
+    protected boolean blockImages() {
+        return false;
+    }
+
+    protected boolean continueOnPageLoadTimeout() {
+        return false;
+    }
 
     @Override
     public final ScrapedProduct scrape(String url) {
@@ -44,15 +64,19 @@ public abstract class AbstractSeleniumScraper
 
             driver.manage()
                     .timeouts()
-                    .pageLoadTimeout(PAGE_LOAD_TIMEOUT);
+                    .pageLoadTimeout(pageLoadTimeout());
 
-            driver.get(url);
+            boolean fullyLoaded = loadPage(
+                    driver,
+                    url);
 
-            waitForDocumentReady(driver);
+            if (fullyLoaded) {
+                waitForDocumentReady(driver);
+            }
 
             WebDriverWait wait = new WebDriverWait(
                     driver,
-                    ELEMENT_TIMEOUT);
+                    elementTimeout());
 
             ScrapedProduct product = capture(
                     driver,
@@ -148,6 +172,8 @@ public abstract class AbstractSeleniumScraper
 
         options.setBinary(chromeBinary);
 
+        options.setPageLoadStrategy(pageLoadStrategy());
+
         options.addArguments(
                 "--headless=new",
                 "--disable-gpu",
@@ -155,7 +181,20 @@ public abstract class AbstractSeleniumScraper
                 "--no-sandbox",
                 "--window-size=1920,1080",
                 "--lang=pt-BR",
-                "--disable-notifications");
+                "--disable-notifications",
+                "--disable-extensions",
+                "--disable-background-networking",
+                "--disable-sync",
+                "--mute-audio",
+                "--renderer-process-limit=1");
+
+        if (blockImages()) {
+            options.setExperimentalOption(
+                    "prefs",
+                    Map.of(
+                            "profile.managed_default_content_settings.images",
+                            2));
+        }
 
         ChromeDriverService service = new ChromeDriverService.Builder()
                 .usingDriverExecutable(
@@ -170,63 +209,39 @@ public abstract class AbstractSeleniumScraper
     protected String firstText(
             WebDriver driver,
             By... selectors) {
-        for (By selector : selectors) {
-            List<WebElement> elements = driver.findElements(selector);
-
-            for (WebElement element : elements) {
-                try {
-                    String text = element.getText();
-
-                    if (text != null
-                            && !text.isBlank()) {
-                        return text.trim();
-                    }
-
-                } catch (WebDriverException ignored) {
-                    // Tenta o próximo elemento.
-                }
-            }
-        }
-
-        return null;
+        return firstExtracted(
+                driver,
+                WebElement::getText,
+                selectors);
     }
 
     protected String firstTextContent(
             WebDriver driver,
             By... selectors) {
-        for (By selector : selectors) {
-            List<WebElement> elements = driver.findElements(selector);
-
-            for (WebElement element : elements) {
-                try {
-                    String text = element.getAttribute(
-                            "textContent");
-
-                    if (text != null
-                            && !text.isBlank()) {
-                        return text.trim();
-                    }
-
-                } catch (WebDriverException ignored) {
-                    // Tenta o próximo elemento.
-                }
-            }
-        }
-
-        return null;
+        return firstAttribute(
+                driver,
+                "textContent",
+                selectors);
     }
 
     protected String firstAttribute(
             WebDriver driver,
             String attribute,
             By... selectors) {
-        for (By selector : selectors) {
-            List<WebElement> elements = driver.findElements(selector);
+        return firstExtracted(
+                driver,
+                element -> element.getAttribute(attribute),
+                selectors);
+    }
 
-            for (WebElement element : elements) {
+    private String firstExtracted(
+            WebDriver driver,
+            Function<WebElement, String> extractor,
+            By... selectors) {
+        for (By selector : selectors) {
+            for (WebElement element : driver.findElements(selector)) {
                 try {
-                    String value = element.getAttribute(
-                            attribute);
+                    String value = extractor.apply(element);
 
                     if (value != null
                             && !value.isBlank()) {
@@ -335,18 +350,53 @@ public abstract class AbstractSeleniumScraper
                         "." + domain);
     }
 
+    private boolean loadPage(
+            WebDriver driver,
+            String url) {
+        try {
+            driver.get(url);
+            return true;
+
+        } catch (TimeoutException exception) {
+            if (!continueOnPageLoadTimeout()) {
+                throw exception;
+            }
+
+            log.warn(
+                    "[{}] Timeout no carregamento; interrompendo "
+                            + "a página e tentando capturar: {}",
+                    store().getDisplayName(),
+                    url);
+
+            try {
+                ((JavascriptExecutor) driver)
+                        .executeScript("window.stop()");
+
+            } catch (WebDriverException ignored) {
+                // Se o renderer não responde, a captura falhará
+                // com o erro já classificado.
+            }
+
+            return false;
+        }
+    }
+
     private void waitForDocumentReady(
             WebDriver driver) {
         WebDriverWait wait = new WebDriverWait(
                 driver,
-                PAGE_LOAD_TIMEOUT);
+                pageLoadTimeout());
+
+        boolean acceptInteractive = pageLoadStrategy() != PageLoadStrategy.NORMAL;
 
         wait.until(currentDriver -> {
             Object state = ((JavascriptExecutor) currentDriver)
                     .executeScript(
                             "return document.readyState");
 
-            return "complete".equals(state);
+            return "complete".equals(state)
+                    || (acceptInteractive
+                            && "interactive".equals(state));
         });
     }
 

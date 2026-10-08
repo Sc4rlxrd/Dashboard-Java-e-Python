@@ -10,5 +10,6 @@ public enum CollectionErrorType {
     ANTI_BOT_BLOCKED,
     RATE_LIMITED,
     INVALID_URL,
-    UNKNOWN
+    UNKNOWN,
+    OUT_OF_STOCK
 }
