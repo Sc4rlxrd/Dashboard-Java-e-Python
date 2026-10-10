@@ -295,8 +295,7 @@ public class KabumScraper extends AbstractSeleniumScraper {
 
         private String normalizePriceText(
                         String value) {
-                if (value == null
-                                || value.isBlank()) {
+                if (value == null || value.isBlank()) {
                         return "";
                 }
 
@@ -311,10 +310,7 @@ public class KabumScraper extends AbstractSeleniumScraper {
                                                 "\\s+",
                                                 " ");
 
-                return Normalizer
-                                .normalize(
-                                                normalizedWhitespace,
-                                                Normalizer.Form.NFD)
+                return Normalizer.normalize(normalizedWhitespace, Normalizer.Form.NFD)
                                 .replaceAll(
                                                 "\\p{M}",
                                                 "")
@@ -327,8 +323,7 @@ public class KabumScraper extends AbstractSeleniumScraper {
                         boolean includeBody) {
                 String currentUrl = driver.getCurrentUrl();
 
-                if (currentUrl == null
-                                || currentUrl.isBlank()) {
+                if (currentUrl == null || currentUrl.isBlank()) {
                         throw new CollectionException(
                                         CollectionErrorType.UNKNOWN,
                                         Store.KABUM,
@@ -338,11 +333,7 @@ public class KabumScraper extends AbstractSeleniumScraper {
 
                 String title = driver.getTitle();
 
-                String body = includeBody
-                                ? firstTextContent(
-                                                driver,
-                                                By.tagName("body"))
-                                : null;
+                String body = includeBody ? firstTextContent(driver, By.tagName("body")) : null;
 
                 String normalizedUrl = currentUrl.toLowerCase(Locale.ROOT);
 
